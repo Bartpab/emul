@@ -389,4 +389,31 @@ defmodule Emulators.S5.Translator do
   def translate([0x785E|[w1|_]]) do
     {2, :LW_GW, :constant, [w1]}
   end
+  def translate([0x780D, [w1|_]]) do
+    {2, :LY_CB, :constant, [w1]}
+  end
+  def translate([0x782D, [w1|_]]) do
+    {2, :LY_CD, :constant, [w1]}
+  end
+  def translate([0x781D, [w1|_]]) do
+    {2, :LY_CW, :constant, [w1]}
+  end
+  def translate([0x780E, [w1|_]]) do
+    {2, :LY_GB, :constant, [w1]}
+  end
+  def translate([0x782E, [w1|_]]) do
+    {2, :LY_GD, :constant, [w1]}
+  end
+  def translate([0x781E, [w1|_]]) do
+    {2, :LY_GW, :constant, [w1]}
+  end
+  def translate([0x6829|_]) do
+    {1, :MAB, :no_operand, []}
+  end
+  def translate([0x6819|_]) do
+    {1, :MAS, :no_operand, []}
+  end
+  def translate([0x6889|_]) do
+    {1, :MBA, :no_operand, []}
+  end
 end
