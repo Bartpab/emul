@@ -220,4 +220,116 @@ defmodule Emulators.S5.Translator do
   def translate([0x700B | [w1 | _]]) do
     {2, :JUR, :constant, [w1]}
   end
+  def translate([w0 | _]) when (w0 >>> 8) == 0x45 do
+    {1, :JZ_assign, :symbol_address, [w0 &&& 0xFF]}
+  end
+
+  def translate([w0 | _]) when (w0 >>> 8) == 0x42 do
+    {1, :L, :C, [0xFF &&& w0]}
+  end
+  def translate([w0 | _]) when (w0 >>> 8) == 0x3A do
+    {1, :L, :DD, [0xFF &&& w0]}
+  end
+  def translate([0x3840 | [w1 | [w2 | _]]]) do
+    {3, :L, :DH, [w1, w2]}
+  end
+  def translate([w0 | _]) when (w0 >>> 8) == 0x22 do
+    {1, :L, :DL, [w0 &&& 0xFF]}
+  end
+  def translate([w0 |_]) when (w0 >>> 8) == 0x2A do
+    {1, :L, :DR, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x32 do
+    {1, :L, :DW, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x1A do
+    {1, :L, :FD, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x12 do
+    {1, :L, :FW, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x0A do
+    {1, :L, :FY, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x4A do
+    {1, :L, :IB, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x5A do
+    {1, :L, :ID, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x52 do
+    {1, :L, :IW, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x28 do
+    {1, :L, :KB, [w0 &&& 0xFF]}
+  end
+  def translate([0x3001|[w1|_]]) do
+    {2, :L, :KC, [w1]}
+  end
+  def translate([0x3004|[w1|_]]) do
+    {2, :L, :KF, [w1]}
+  end
+  def translate([0x3800|[w1|[w2|_]]]) do
+    {3, :L, :KG, [w1, w2]}
+  end
+  def translate([0x3040|[w1|_]]) do
+    {2, :L, :KH, [w1]}
+  end
+  def translate([0x3080|[w1|_]]) do
+    {2, :L, :KM, [w1]}
+  end
+  def translate([0x3010|[w1|_]]) do
+    {2, :L, :KS, [w1]}
+  end
+  def translate([0x3002|[w1|_]]) do
+    {2, :L, :KT, [w1]}
+  end
+  def translate([0x3020|[w1|_]]) do
+    {2, :L, :KY, [w1]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x57 do
+    {1, :L, :OW, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x5F do
+    {1, :L, :OY, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x7A do
+    {1, :L, :PW, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x72 do
+    {1, :L, :PY, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x4A do
+    {1, :L, :QB, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x5A do
+    {1, :L, :QD, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x52 do
+    {1, :L, :QW, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x6A do
+    {1, :L, :RI, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x47 do
+    {1, :L, :RJ, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x62 do
+    {1, :L, :RS, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x4F do
+    {1, :L, :RT, [w0 &&& 0xFF]}
+  end
+  def translate([0x78EB|[w1|_]]) when (w1 >>> 12) == 0x00 do
+    {2, :L, :SD, [(w1 &&& 0x0F00) >>> 8, w1 &&& 0xFF]}
+  end
+  def translate([0x78CB|[w1|_]]) when (w1 >>> 12) == 0x00 do
+    {2, :L, :SW, [(w1 &&& 0x0F00) >>> 8, w1 &&& 0xFF]}
+  end
+  def translate([0x78AB|[w1|_]]) when (w1 >>> 12) == 0x00 do
+    {2, :L, :SY, [(w1 &&& 0x0F00) >>> 8, w1 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x02 do
+    {1, :L, :T, [w0 &&& 0xFF]}
+  end
 end
