@@ -332,4 +332,61 @@ defmodule Emulators.S5.Translator do
   def translate([w0|_]) when (w0 >>> 8) == 0x02 do
     {1, :L, :T, [w0 &&& 0xFF]}
   end
+  def translate([w0|_]) when (w0 >>> 8) == 0x46 do
+    {1, :L_assign, :formal_operand, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x4C do
+    {1, :LC, :C, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x0C do
+    {1, :LC, :T, [w0 &&& 0xFF]}
+  end
+  def translate([0x680B|_]) do
+    {1, :LDI, :A1, []}
+  end
+  def translate([0x682B|_]) do
+    {1, :LDI, :A2, []}
+  end
+  def translate([0x689B|_]) do
+    {1, :LDI, :BA, []}
+  end
+  def translate([0x68AB|_]) do
+    {1, :LDI, :BR, []}
+  end
+  def translate([0x684B|_]) do
+    {1, :LDI, :SA, []}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x0E do
+    {1, :LD_assign, :formal_operand, [w0 &&& 0xFF]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x56 do
+    {1, :LDW_assign, :formal_operand, [w0 &&& 0xFF]}
+  end
+  def translate([0x700C|_]) do
+    {1, :LIM, :no_operand, []}
+  end
+  def translate([w0 | _]) when (w0 >>> 4) == 0x400 do
+    {1, :LIR, :register_number, [0xF &&& w0]}
+  end
+  def translate([0x6804|[w1|_]]) do
+    {2, :LRD, :constant, [w1]}
+  end
+  def translate([0x6800|[w1|_]]) do
+    {2, :LRW, :constant, [w1]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x3F do
+    {1, :LW_assign, :formal_operand, [w0]}
+  end
+  def translate([0x786D|[w1|_]]) do
+    {2, :LW_CD, :constant, [w1]}
+  end
+  def translate([0x785D|[w1|_]]) do
+    {2, :LW_CW, :constant, [w1]}
+  end
+  def translate([0x786E|[w1|_]]) do
+    {2, :LW_GD, :constant, [w1]}
+  end
+  def translate([0x785E|[w1|_]]) do
+    {2, :LW_GW, :constant, [w1]}
+  end
 end
