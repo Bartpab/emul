@@ -274,4 +274,41 @@ defmodule Emulators.S5.Assemble do
             :KG -> [0x3800, w0 &&& 0xFFFF, w1 &&& 0xFFFF]
         end
     end
+    def translate({:L_assign, _, [w0]}) do
+        [0x4600 + (w0 &&& 0xFF)]
+    end
+    def translate({:L, operand, [w0]}) do
+        w0 = w0 &&& 0xFF
+        case operand do
+            :C -> [0x4C00 + w0]
+            :T -> [0x0C00 + w0]
+        end
+    end
+    def translate({:LDI, operand, _}) do
+        case operand ->
+            :A1 -> [0x680B]
+            :A2 -> [0x682B]
+            :BA -> [0x689B]
+            :BR -> [0x68AB]
+            :SA -> [0x684B]
+        end
+    end
+    def translate({:LD_assign, _, [w0]}) do
+        [0x0E00 + (w0 &&& 0xFF)]
+    end
+    def translate({:LDW_assign, _, [w0]}) do
+        [0x5600 + (w0 &&& 0xFF)]
+    end
+    def translate({:LIM, _, _}) do
+        [0x700C]
+    end
+    def translate({:LIR, _, [w0]}) do
+        [0x4000 + (w0 &&& 0xF)]
+    end
+    def translate({:LRD, _, [w0]}) do 
+        [0x6804, w0 &&& 0xFFFF]
+    end
+    def translate({:LRW, _, [w0]}) do
+        [0x6800, w0 &&& 0xFFFF]
+    end
 end
