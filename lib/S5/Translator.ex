@@ -750,5 +750,421 @@ defmodule Emulators.S5.Translator do
     addr = (w1 &&& 0xFF)
     {2, :SU, :T, [bit, addr]}
   end
+  def translate([w0|_]) when (w0 >>> 8) == 0x3B do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :DD, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x23 do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :DL, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x2B do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :DR, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x33 do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :DW, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x1B do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :FD, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x13 do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :FW, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x0B do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :FY, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x4B do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :IB, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x5B do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :ID, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x53 do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :IW, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x77 do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :OW, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x7F do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :OY, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x7B do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :PW, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x73 do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :PY, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x4B do
+    addr = (w0 &&& 0xFF) - 0x80
+    {1, :T, :QB, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x5B do
+    addr = (w0 &&& 0xFF) - 0x80
+    {1, :T, :QD, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x53 do
+    addr = (w0 &&& 0xFF) - 0x80
+    {1, :T, :QW, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x6B do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :RI, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x67 do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :RJ, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x63 do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :RS, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x6F do
+    addr = (w0 &&& 0xFF)
+    {1, :T, :RT, [addr]}
+  end
+  def translate([0x78FB|[w1|_]]) when (w1 >>> 12) == 0x0 do
+    addr = (w1 &&& 0xFFF)
+    {2, :T, :SD, [addr]}
+  end
+  def translate([0x78DB|[w1|_]]) when (w1 >>> 12) == 0x0 do
+    addr = (w1 &&& 0xFFF)
+    {2, :T, :SW, [addr]}
+  end
+  def translate([0x78BB|[w1|_]]) when (w1 >>> 12) == 0x0 do
+    addr = (w1 &&& 0xFFF)
+    {2, :T, :SY, [addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x66 do
+    addr = (w0 &&& 0xFF)
+    {1, :T_assign, :formal_operand, [addr]}
+  end
+  def translate([0x7015|[w1|_]]) when (w1 >>> 12) == 0xC do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    {2, :TB, :C, [bit, addr]}
+  end
+  def translate([0x7046|[w1|_]]) when (w1 >>> 12) == 0xC do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    {2, :TB, :D, [bit, addr]}
+  end
+  def translate([0x7049|[w1|_]]) when (w1 >>> 12) == 0xC do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    {2, :TB, :F, [bit, addr]}
+  end
+  def translate([0x7038|[w1|_]]) when (w1 >>> 12) == 0xC do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    cond do
+        addr < 0x80 -> {2, :TB, :I, [bit, addr]}
+        addr >= 0x80 -> {2, :TB, :Q, [bit, addr - 0x80]}
+    end
+  end
+  def translate([0x7047|[w1|_]]) when (w1 >>> 12) == 0xC do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    {2, :TB, :RI, [bit, addr]}
+  end
+  def translate([0x701E|[w1|_]]) when (w1 >>> 12) == 0xC do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    {2, :TB, :RJ, [bit, addr]}
+  end
+  def translate([0x7057|[w1|_]]) when (w1 >>> 12) == 0xC do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    {2, :TB, :RS, [bit, addr]}
+  end
+  def translate([0x700E|[w1|_]]) when (w1 >>> 12) == 0xC do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    {2, :TB, :RT, [bit, addr]}
+  end
+  def translate([0x7025|[w1|_]]) when (w1 >>> 12) == 0xC do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    {2, :TB, :T, [bit, addr]}
+  end
+  #
+  def translate([0x7015|[w1|_]]) when (w1 >>> 12) == 0x8 do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    {2, :TBN, :C, [bit, addr]}
+  end
+  def translate([0x7046|[w1|_]]) when (w1 >>> 12) == 0x8 do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    {2, :TBN, :D, [bit, addr]}
+  end
+  def translate([0x7049|[w1|_]]) when (w1 >>> 12) == 0x8 do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    {2, :TBN, :F, [bit, addr]}
+  end
+  def translate([0x7038|[w1|_]]) when (w1 >>> 12) == 0x8 do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    cond do
+        addr < 0x80 -> {2, :TBN, :I, [bit, addr]}
+        addr >= 0x80 -> {2, :TBN, :Q, [bit, addr - 0x80]}
+    end
+  end
+  def translate([0x7047|[w1|_]]) when (w1 >>> 12) == 0x8 do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    {2, :TBN, :RI, [bit, addr]}
+  end
+  def translate([0x701E|[w1|_]]) when (w1 >>> 12) == 0x8 do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    {2, :TBN, :RJ, [bit, addr]}
+  end
+  def translate([0x7057|[w1|_]]) when (w1 >>> 12) == 0x8 do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    {2, :TBN, :RS, [bit, addr]}
+  end
+  def translate([0x700E|[w1|_]]) when (w1 >>> 12) == 0x8 do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    {2, :TBN, :RT, [bit, addr]}
+  end
+  def translate([0x7025|[w1|_]]) when (w1 >>> 12) == 0x8 do
+    addr = (w1 &&& 0xFF)
+    bit = (w1 >>> 8) &&& 0xF
+    {2, :TBN, :T, [bit, addr]}
+  end
+  #
+  def translate([0x7002|_]) do
+    {1, :TAK, :no_operand, []}
+  end
+  #
+  def translate([0x680F|_]) do
+    {1, :TDI, :A1, []}
+  end
+  def translate([0x682F|_]) do
+    {1, :TDI, :A2, []}
+  end
+  def translate([0x689F|_]) do
+    {1, :TDI, :BA, []}
+  end
+  def translate([0x68AF|_]) do
+    {1, :TDI, :BR, []}
+  end
+  def translate([0x684F|_]) do
+    {1, :TDI, :SA, []}
+  end
+  #
+  def translate([w0|_]) when (w0 >>> 4) == 0x480 do
+    value = (w0 &&& 0xF)
+    {1, :TIR, :register_number, [value]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x03 do
+    value = (w0 &&& 0xFF)
+    {1, :TNB, :constant, [value]}
+  end
+  def translate([w0|_]) when (w0 >>> 8) == 0x43 do
+    value = (w0 &&& 0xFF)
+    {1, :TNW, :constant, [value]}
+  end
+  #
+  def translate([0x6805|[w1|_]]) do
+    {2, :TRD, :constant, [w1]}
+  end
+  #
+  def translate([0x6803|[w1|_]]) do
+    {2, :TRW, :constant, [w1]}
+  end
+  #
+  def translate([0x78CD|[w1|_]]) do
+    {2, :TSC, :constant, [w1]}
+  end
+  #
+  def translate([0x78CE|[w1|_]]) do
+    {2, :TSG, :constant, [w1]}
+  end
+  #
+  def translate([0x78ED|[w1|_]]) do
+    {2, :TW_CD, :constant, [w1]}
+  end
+  #
+  def translate([0x78DD|[w1|_]]) do
+    {2, :TW_CW, :constant, [w1]}
+  end
+  #
+  def translate([0x78EE|[w1|_]]) do
+    {2, :TW_GD, :constant, [w1]}
+  end
+  #
+  def translate([0x78DE|[w1|_]]) do
+    {2, :TW_GW, :constant, [w1]}
+  end
+  #
+  def translate([0x701F|_]) do
+    {1, :TXB, :no_operand, []}
+  end
+  #
+  def translate([0x700F|_]) do
+    {1, :TXW, :no_operand, []}
+  end
+  #
+  def translate([0x788D|[w1|_]]) do
+    {2, :TY_CB, :constant, [w1]}
+  end
+  #
+  def translate([0x78AD|[w1|_]]) do
+    {2, :TY_CD, :constant, [w1]}
+  end
+  #
+  def translate([0x789D|[w1|_]]) do
+    {2, :TY_CW, :constant, [w1]}
+  end
+  #
+  def translate([0x788E|[w1|_]]) do
+    {2, :TY_GB, :constant, [w1]}
+  end
+  #
+  def translate([0x78AE|[w1|_]]) do
+    {2, :TY_GD, :constant, [w1]}
+  end
+  #
+  def translate([0x789E|[w1|_]]) do
+    {2, :TY_GW, :constant, [w1]}
+  end
+  #
+  def translate([0x5100|_]) do
+    {1, :XOW, :no_operand, []}
+  end
+  #
+  def translate([0xBF00|_]) do
+    {1, :rpar, :no_operand, []}
+  end
+  #
+  def translate([0x783F|[w1|_]]) when (w1 >>> 12) == 0x6 do
+    bit = (w1 >>> 8) &&& 0xF
+    addr = (w1 &&& 0xFF)
+    {2, :assign, :D, [bit, addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 12) == 0x9 and ((w0 >>> 8) &&& 0xF) >= 0x8 do
+    bit = ((w0 >>> 8) &&& 0xF) - 0x8
+    addr = (w0 &&& 0xFF)
+    {1, :assign, :F, [bit, addr]}
+  end
+  def translate([w0|_]) when (w0 >>> 12) == 0xD and ((w0 >>> 8) &&& 0xF) >= 0x8 do
+    bit = ((w0 >>> 8) &&& 0xF) - 0x8
+    addr = (w0 &&& 0xFF)
+    cond do
+        addr < 0x80 -> {1, :assign, :I, [bit, addr]}
+        addr >= 0x80 -> {1, :assign, :Q, [bit, addr - 0x80]}
+    end
+  end
+  def translate([0x783B|[w1|_]]) do 
+    bit = (w1 >>> 12)
+    addr = (w1 &&& 0xFFF)
+    {2, :assign, :S, [bit, addr]}
+  end
+  #
+  def translate([w0|_]) when (w0 >>> 8) == 0x1F do
+    value = (w0 &&& 0xFF)
+    {1, :equal, :formal_operand, [value]}
+  end
+  #
+  def translate([0x3920|_]) do
+    {1, :gt_D, :no_operand, []}
+  end
+  def translate([0x3940|_]) do
+    {1, :lt_D, :no_operand, []}
+  end
+  def translate([0x3960|_]) do
+    {1, :eq_D, :no_operand, []}
+  end
+  def translate([0x3980|_]) do
+    {1, :neq_D, :no_operand, []}
+  end
+  def translate([0x39A0|_]) do
+    {1, :gte_D, :no_operand, []}
+  end
+  def translate([0x39C0|_]) do
+    {1, :lte_D, :no_operand, []}
+  end
+  def translate([0x600D|_]) do
+    {1, :add_D, :no_operand, []}
+  end
+  def translate([0x6009|_]) do
+    {1, :sub_D, :no_operand, []}
+  end
+  def translate([0x6000|_]) do
+    {1, :div_F, :no_operand, []}
+  end
+  def translate([0x6004|_]) do
+    {1, :mult_F, :no_operand, []}
+  end
+  def translate([0x7900|_]) do
+    {1, :add_F, :no_operand, []}
+  end
+  def translate([0x5900|_]) do
+    {1, :sub_F, :no_operand, []}
+  end
+  def translate([0x2180|_]) do
+    {1, :neq_F, :no_operand, []}
+  end
+  def translate([0x2120|_]) do
+    {1, :gt_F, :no_operand, []}
+  end
+  def translate([0x2140|_]) do
+    {1, :lt_F, :no_operand, []}
+  end
+  def translate([0x2160|_]) do
+    {1, :eq_F, :no_operand, []}
+  end
+  def translate([0x21A0|_]) do
+    {1, :gte_F, :no_operand, []}
+  end
+  def translate([0x21C0|_]) do
+    {1, :lte_F, :no_operand, []}
+  end
+  def translate([0x3120|_]) do
+    {1, :gt_G, :no_operand, []}
+  end
+  def translate([0x3140|_]) do
+    {1, :lt_G, :no_operand, []}
+  end
+  def translate([0x3160|_]) do
+    {1, :eq_G, :no_operand, []}
+  end
+  def translate([0x3180|_]) do
+    {1, :neq_G, :no_operand, []}
+  end
+  def translate([0x31A0|_]) do
+    {1, :gte_G, :no_operand, []}
+  end
+  def translate([0x31C0|_]) do
+    {1, :lte_G, :no_operand, []}
+  end
+  def translate([0x6003|_]) do
+    {1, :div_G, :no_operand, []}
+  end
+  def translate([0x6007|_]) do
+    {1, :mult_G, :no_operand, []}
+  end
+  def translate([0x600F|_]) do
+    {1, :add_G, :no_operand, []}
+  end
+  def translate([0x600B|_]) do
+    {1, :sub_G, :no_operand, []}
+  end
 end
 
