@@ -16,8 +16,9 @@ defmodule EmulatorsTest.S5.Translator do
     assert {1, :A, :F, [0xC, 0xBA]} = Translator.translate([0x8CBA])
   end
 
-  test "A I/Q 0xCBA" do
-    assert {1, :A, :I_Q, [0xC, 0xBA]} = Translator.translate([0xCCBA])
+  test "A Q 0xCBA" do
+    v = 0xBA - 0x80
+    assert {1, :A, :Q, [0xC, ^v]} = Translator.translate([0xCCBA])
   end
 
   test "A S 0xDCBA" do
@@ -68,8 +69,8 @@ defmodule EmulatorsTest.S5.Translator do
     assert {1, :AN, :F, [0xB, 0xCD]} = Translator.translate([0xABCD])
   end
 
-  test "AN I/Q 0xBCD" do
-    assert {1, :AN, :I_Q, [0xB, 0xCD]} == Translator.translate([0xEBCD])
+  test "AN Q 0xBCD" do
+    assert {1, :AN, :Q, [0xB, 0xCD - 0x80]} == Translator.translate([0xEBCD])
   end
 
   test "AN S 0xBCDA" do

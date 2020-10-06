@@ -46,7 +46,7 @@ defmodule Emulators.S5.Block do
         end
 
         infos = (w1 >>> 8)
-        id = (w1 &&& 0xFF)      
+        id = (w1 &&& 0xFF)
         type = Emulators.S5.Block.get_block_type(infos)
         validity = Emulators.S5.Block.get_block_validity(infos)
         pids = (w2 >>> 8)

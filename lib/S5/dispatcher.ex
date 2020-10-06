@@ -1,13 +1,13 @@
-defmodule Emulators.S5.Dispatcher do   
-    use Bitwise 
+defmodule Emulators.S5.Dispatcher do
+    use Bitwise
     import Emulators.S5.Guards
 
     # A
-    def dispatch(%{:sm => sm} = state, {:A, operand, args}) 
+    def dispatch(%{:sm => sm} = state, {:A, operand, args})
     when operand in [:I, :Q, :F, :S, :D, :T, :C]
     do
         result = sm.get(state, :RLO) &&& sm.get(state, operand, args)
-        state |> sm.set(:RLO, result) 
+        state |> sm.set(:RLO, result)
     end
 
     # AN
@@ -15,7 +15,7 @@ defmodule Emulators.S5.Dispatcher do
     when operand in [:I, :Q, :F, :S, :D, :T, :C]
     do
         result = sm.get(state, :RLO) &&& ~~~sm.get(state, operand, args)
-        state |> sm.set(:RLO, result) 
+        state |> sm.set(:RLO, result)
     end
 
     # O
@@ -23,7 +23,7 @@ defmodule Emulators.S5.Dispatcher do
     when operand in [:I, :Q, :F, :S, :D, :T, :C]
     do
         result = sm.get(state, :RLO) ||| sm.get(state, operand, args)
-        state |> sm.set(:RLO, result)         
+        state |> sm.set(:RLO, result)
     end
 
     # ON
@@ -31,7 +31,7 @@ defmodule Emulators.S5.Dispatcher do
     when operand in [:I, :Q, :F, :S, :D, :T, :C]
     do
         result = sm.get(state, :RLO) ||| ~~~sm.get(state, operand, args)
-        state |> sm.set(:RLO, result)         
+        state |> sm.set(:RLO, result)
     end
 
     # S
@@ -45,13 +45,13 @@ defmodule Emulators.S5.Dispatcher do
             state
         end
     end
-    
+
     # R
     def dispatch(%{:sm => sm} = state, {:R, operand, args})
     when operand in [:I, :Q, :F, :S, :D]
     do
         rlo = state |> sm.get(:RLO)
-        
+
         if rlo == 1 do
             sm.set(state, operand, args, 0)
         else
@@ -60,40 +60,40 @@ defmodule Emulators.S5.Dispatcher do
 
     end
 
-    # = 
+    # =
     def dispatch(%{:sm => sm} = state, {:assign, operand, args})
     when operand in [:I, :Q, :F, :S, :D]
     do
         sm.set(state, operand, args, sm.get(:RLO))
     end
-    
+
     # L
     # L IB/QB/FY/SY
     def dispatch(%{:sm => sm} = state, {:L, operand, args})
     when operand in [:IB, :QB, :FY, :SY, :PY, :OY]
     do
         byte = sm.get(state, operand, args)
-        state 
+        state
         |> sm.set(:ACCU_1_L, byte)
     end
     # L T/C
     def dispatch(%{:sm => sm} = state, {:L, operand, args})
     when operand in [:C, :T]
-    do   
+    do
         word = sm.get(state, operand, args)
-        state 
+        state
         |> sm.set(:ACCU_1_L, word)
-    end 
+    end
     # L IW/QW/FW/SW/PW/OW
     def dispatch(%{:sm => sm} = state, {:L, operand, args})
     when operand in [:IW, :QW, :FW, :SW, :PW, :OW]
     do
         word = sm.get(state, operand, args)
-        
+
         b0 = (word &&& 0xFF) <<< 8
         b1 = (word &&& 0xFF) >>> 8
 
-        state 
+        state
         |> sm.set(:ACCU_1_L, b0 + b1)
     end
 end
