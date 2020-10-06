@@ -738,5 +738,88 @@ defmodule Emulators.S5.Assemble do
     def translate({:equal, _, [w0]}) do
         [0x1F00 + (w0 &&& 0xFF)]
     end
-
+    def translate({:gt_D, _, _}) do
+        [0x3920]
+    end
+    def translate({:lt_D, _, _}) do
+        [0x3940]
+    end
+    def translate({:eq_D, _, _}) do
+        [0x3960]
+    end
+    def translate({:neq_D, _, _}) do
+        [0x3980]
+    end
+    def translate({:gte_D, _, _}) do 
+        [0x39A0]
+    end
+    def translate({:lte_D, _, _}) do 
+        [0x39C0]
+    end
+    def translate({:add_D, _, _}) do
+        [0x600D]
+    end
+    def translate({:sub_D, _, _}) do
+        [0x6009]
+    end
+    def translate({:div_F, _, _}) do
+        [0x6000]
+    end
+    def translate({:mult_F, _, _}) do
+        [0x6004]
+    end
+    def translate({:add_F, _, _}) do
+        [0x7900]
+    end
+    def translate({:sub_F, _, _}) do 
+        [0x5900]
+    end
+    def translate({:neq_F, _, _}) do
+        [0x2180]
+    end
+    def translate({:gt_F, _, _}) do
+        [0x2120]
+    end
+    def translate({:lt_F, _, _}) do
+        [0x2140]
+    end
+    def translate({:eq_F, _, _}) do
+        [0x2160]
+    end
+    def translate({:gte_F, _, _}) do
+        [0x21A0]
+    end
+    def translate({:lte_F, _, _}) do
+        [0x21C0]
+    end
+    def translate({:gt_G, _, _}) do
+        [0x3120]
+    end
+    def translate({:lt_G, _, _}) do
+        [0x3140]
+    end
+    def translate({:eq_G, _, _}) do
+        [0x3160]
+    end
+    def translate({:neq_G, _, _}) do
+        [0x3180]
+    end
+    def translate({:gte_G, _, _}) do 
+        [0x31A0]
+    end
+    def translate({:lte_G, _, _}) do 
+        [0x31C0]
+    end
+    def translate({:div_G, _, _}) do
+        [0x6003]
+    end
+    def translate({:mult_G, _, _}) do
+        [0x6007]
+    end
+    def translate({:add_G, _, _}) do
+        [0x600F]
+    end
+    def translate({:sub_G, _, _}) do 
+        [0x600B]
+    end
 end
