@@ -277,7 +277,7 @@ defmodule Emulators.S5.Assemble do
     def translate({:L_assign, _, [w0]}) do
         [0x4600 + (w0 &&& 0xFF)]
     end
-    def translate({:L, operand, [w0]}) do
+    def translate({:LC, operand, [w0]}) do
         w0 = w0 &&& 0xFF
         case operand do
             :C -> [0x4C00 + w0]
@@ -285,7 +285,7 @@ defmodule Emulators.S5.Assemble do
         end
     end
     def translate({:LDI, operand, _}) do
-        case operand ->
+        case operand do
             :A1 -> [0x680B]
             :A2 -> [0x682B]
             :BA -> [0x689B]
@@ -311,4 +311,432 @@ defmodule Emulators.S5.Assemble do
     def translate({:LRW, _, [w0]}) do
         [0x6800, w0 &&& 0xFFFF]
     end
+    def translate({:LW_assign, _, [w0]}) do 
+        [0x3F00 + (w0 &&& 0xFF)]
+    end
+    def translate({:LW_CD, _, [w0]}) do
+        [0x786D, w0 &&& 0xFFFF]
+    end
+    def translate({:LW_CW, _, [w0]}) do
+        [0x785D, w0 &&& 0xFFFF]
+    end
+    def translate({:LW_GD, _, [w0]}) do
+        [0x786E, w0 &&& 0xFFFF]
+    end    
+    def translate({:LW_GW, _, [w0]}) do
+        [0x785E, w0 &&& 0xFFFF]
+    end    
+    def translate({:LY_CB, _, [w0]}) do
+        [0x780D, w0 &&& 0xFFFF]
+    end    
+    def translate({:LY_CD, _, [w0]}) do
+        [0x782D, w0 &&& 0xFFFF]
+    end    
+    def translate({:LY_CW, _, [w0]}) do
+        [0x781D, w0 &&& 0xFFFF]
+    end    
+    def translate({:LY_GB, _, [w0]}) do
+        [0x780E, w0 &&& 0xFFFF]
+    end    
+    def translate({:LY_GD, _, [w0]}) do
+        [0x782E, w0 &&& 0xFFFF]
+    end    
+    def translate({:LY_GW, _, [w0]}) do
+        [0x781E, w0 &&& 0xFFFF]
+    end    
+    def translate({:MAB, _, _}) do 
+        [0x6829]
+    end
+    def translate({:MAS, _, _}) do
+        [0x6819]
+    end
+    def translate({:MBA, _, _}) do
+        [0x6889]
+    end
+    def translate({:MBR, _, [w0, w1]}) do
+        [0x7809 + (w0 &&& 0xF <<< 4), w1 &&& 0xFFFF]
+    end
+    def translate({:MBS, _, _}) do
+        [0x6899]
+    end
+    def translate({:MSA, _, _}) do
+        [0x6849]
+    end
+    def translate({:MSB, _, _}) do
+        [0x6869]
+    end
+    def translate({:NOP_0, _, _}) do
+        [0x0000]
+    end
+    def translate({:NOP_1, _, _}) do 
+        [0xFFFF]
+    end
+    def translate({:O, operand, args}) do
+        case operand do
+            :C -> 
+                [w0] = args
+                [0xB900 + (w0 &&& 0xFF)]
+            :D ->
+                [bit, addr] = args
+                [0x783F, 0x1000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :F ->
+                [bit, addr] = args
+                [0x8800 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :I ->
+                [bit, addr] = args
+                [0xC000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]   
+            :Q -> 
+                [bit, addr] = args
+                [0xC000 + ((bit &&& 0xF) <<< 8) + ((addr + 0x80) &&& 0xFF)]
+            :S ->
+                [bit, addr]  = args
+                [0x781B, ((bit &&& 0xF) <<< 14) + (addr &&& 0xFFF)]
+            :T ->
+                [w0] = args
+                [0xF900 + (w0 &&& 0xFF)]
+            :no_operand ->
+                [0xFB00]
+        end
+    end
+    def translate({:O_lpar, _, _}) do
+        [0xBB00]
+    end
+    def translate({:O_assign, _, [w0]}) do
+        [0x0F00 + (w0 &&& 0xFF)]
+    end
+    def translate({:ON, operand, args}) do
+        case operand do
+            :C -> 
+                [w0] = args
+                [0xBD00 + (w0 &&& 0xFF)]
+            :D ->
+                [bit, addr] = args
+                [0x783F, 0x3000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :F ->
+                [bit, addr] = args
+                [0xA800 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :I ->
+                [bit, addr] = args
+                [0xE000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]   
+            :Q -> 
+                [bit, addr] = args
+                [0xE000 + ((bit &&& 0xF) <<< 8) + ((addr + 0x80) &&& 0xFF)]
+            :S ->
+                [bit, addr]  = args
+                [0x785B, ((bit &&& 0xF) <<< 14) + (addr &&& 0xFFF)]
+            :T ->
+                [w0] = args
+                [0xFD00 + (w0 &&& 0xFF)]
+        end
+    end
+    def translate({:ON_assign, _, [w0]}) do
+        [0x2F00 + (w0 &&& 0xFF)]
+    end
+    def translate({:OW, _, _}) do
+        [0x4900]
+    end
+    def translate({:R, operand, args}) do
+        case operand do
+            :C -> 
+                [w0] = args
+                [0x7C00 + (w0 &&& 0xFF)]
+            :D ->
+                [bit, addr] = args
+                [0x783F, 0x5000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :F ->
+                [bit, addr] = args
+                [0xB000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :I ->
+                [bit, addr] = args
+                [0xF000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]   
+            :Q -> 
+                [bit, addr] = args
+                [0xF000 + ((bit &&& 0xF) <<< 8) + ((addr + 0x80) &&& 0xFF)]
+            :S ->
+                [bit, addr]  = args
+                [0x786B, ((bit &&& 0xF) <<< 14) + (addr &&& 0xFFF)]
+            :T ->
+                [w0] = args
+                [0x3C00 + (w0 &&& 0xFF)]
+        end
+    end
+    def translate({:RA, _, _}) do
+        [0x0880]
+    end
+    def translate({:RAE, _, _}) do
+        [0x7810]
+    end
+    def translate({:RB_assign, _, [w0]}) do
+        [0x3700 + (w0 &&& 0xFF)]
+    end
+    def translate({:RD_assign, _, [w0]}) do
+        [0x3E00 + (w0 &&& 0xFF)]
+    end
+    def translate({:RLD, _, [w0]}) do
+        [0x6400 + (w0 &&& 0xFF)]
+    end
+    def translate({:RRD, _, [w0]}) do
+        [0x7400 + (w0 &&& 0xFF)]
+    end    
+    def translate({:RU, operand, [bit, addr]}) do
+        case operand do
+            :C -> [0x7015, ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :D -> [0x7046, ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :F -> [0x7049, ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :I -> [0x7038, ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :Q -> [0x7038, ((bit &&& 0xF) <<< 8) + ((addr+0x80) &&& 0xFF)]
+            :RI -> [0x7047, ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :RJ -> [0x701E, ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :RS -> [0x7057, ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :RT -> [0x700E, ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :T -> [0x7025, ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+        end
+    end
+    def translate({:S, operand, args}) do
+        case operand do
+            :C -> 
+                [w0] = args
+                [0x5C00 + (w0 &&& 0xFF)]
+            :D ->
+                [bit, addr] = args
+                [0x783F, 0x4000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :F ->
+                [bit, addr] = args
+                [0x9000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :I ->
+                [bit, addr] = args
+                [0xD000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]   
+            :Q -> 
+                [bit, addr] = args
+                [0xD000 + ((bit &&& 0xF) <<< 8) + ((addr + 0x80) &&& 0xFF)]
+            :S ->
+                [bit, addr]  = args
+                [0x782B, ((bit &&& 0xF) <<< 14) + (addr &&& 0xFFF)]
+        end
+    end
+    def translate({:S_assign, _, [w0]}) do
+        [0x1700 + (w0 &&& 0xFF)]
+    end
+    def translate({:SD, _, [w0]}) do
+        [0x2400 + (w0 &&& 0xFF)]
+    end
+    def translate({:SD_assign, _, [w0]}) do
+        [0x2600 + (w0 &&& 0xFF)]
+    end
+    def translate({:SE, _, [w0]}) do
+        [0x1C00 + (w0 &&& 0xFF)]
+    end
+    def translate({:SEC_assign, _, [w0]}) do
+        [0x1E00 + (w0 &&& 0xFF)]
+    end
+    def translate({:SED, _, [w0]}) do
+        [0x7806, (w0 &&& 0xFF)]
+    end
+    def translate({:SEE, _, [w0]}) do
+        [0x7807, (w0 &&& 0xFF)]
+    end
+    def translate({:SF, _, [w0]}) do
+        [0x1400 + (w0 &&& 0xFF)]
+    end
+    def translate({:SFD_assign, _, [w0]}) do
+        [0x1600 + (w0 &&& 0xFF)]
+    end
+    def translate({:SIM, _, _}) do
+        [0x700D]
+    end
+    def translate({:SLD, _, [w0]}) do
+        [0x2900 + (w0 &&& 0xFF)]
+    end
+    def translate({:SLW, _, [w0]}) do
+        [0x6100 + (w0 &&& 0xFF)]
+    end
+    def translate({:SP, _, [w0]}) do
+        [0x3400 + (w0 &&& 0xFF)]
+    end
+    def translate({:SP_assign, _, [w0]}) do
+        [0x3600 + (w0 &&& 0xFF)]
+    end   
+    def translate({:SRW, _, [w0]}) do
+        [0x6900 + (w0 &&& 0xFF)]
+    end 
+    def translate({:SS, _, [w0]}) do
+        [0x2C00 + (w0 &&& 0xFF)]
+    end
+    def translate({:SSD, _, [w0]}) do
+        [0x7100 + (w0 &&& 0xFF)]
+    end
+    def translate({:SSU_assign, _, [w0]}) do
+        [0x2E00 + (w0 &&& 0xFF)]
+    end
+    def translate({:SSW, _, [w0]}) do
+        [0x6801 + (w0 &&& 0xF <<< 4)]
+    end
+    def translate({:STP, _, _}) do
+        [0x7003]
+    end
+    def translate({:STS, _, _}) do
+        [0x7000]
+    end
+    def translate({:STW, _, _}) do
+        [0x7004]
+    end
+    def translate({:SU, operand, [bit, addr]}) do
+        case operand do
+            :C -> [0x7015, 0x4000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :D -> [0x7046, 0x4000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :F -> [0x7049, 0x4000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :I -> [0x7038, 0x4000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :Q -> [0x7038, 0x4000 + ((bit &&& 0xF) <<< 8) + ((addr+0x80) &&& 0xFF)]
+            :RI -> [0x7047, 0x4000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :RJ -> [0x701E, 0x4000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :RS -> [0x7057, 0x4000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :RT -> [0x700E, 0x4000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :T -> [0x7025, 0x4000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+        end
+    end
+    def translate({:T, operand, [w0]}) do
+        case operand do
+            :DD -> [0x3B00 + (w0 &&& 0xFF)]
+            :DL -> [0x2300 + (w0 &&& 0xFF)]
+            :DR -> [0x2B00 + (w0 &&& 0xFF)]
+            :DW -> [0x3300 + (w0 &&& 0xFF)]
+            :FD -> [0x1B00 + (w0 &&& 0xFF)]
+            :FW -> [0x1300 + (w0 &&& 0xFF)]
+            :FY -> [0x0B00 + (w0 &&& 0xFF)]
+            :IB -> [0x4B00 + (w0 &&& 0xFF)]
+            :ID -> [0x5B00 + (w0 &&& 0xFF)]
+            :IW -> [0x5300 + (w0 &&& 0xFF)]
+            :OW -> [0x7700 + (w0 &&& 0xFF)]
+            :OY -> [0x7F00 + (w0 &&& 0xFF)]
+            :PW -> [0x7B00 + (w0 &&& 0xFF)]
+            :PY -> [0x7300 + (w0 &&& 0xFF)]
+            :QB -> [0x4B00 + ((w0+0x80) &&& 0xFF)]
+            :QD -> [0x5B00 + ((w0+0x80) &&& 0xFF)]
+            :QW -> [0x5300 + ((w0+0x80) &&& 0xFF)]
+            :RI -> [0x6B00 + (w0 &&& 0xFF)]
+            :RJ -> [0x6700 + (w0 &&& 0xFF)]
+            :RS -> [0x6300 + (w0 &&& 0xFF)]
+            :RT -> [0x6F00 + (w0 &&& 0xFF)]
+            :SD -> [0x78FB, (w0 &&& 0xFFF)]
+            :SW -> [0x78DB, (w0 &&& 0xFFF)]
+            :SY -> [0x78BB, (w0 &&& 0xFFF)]
+        end
+    end
+    def translate({:T_assign, _, [w0]}) do
+        [0x6600 + (w0 &&& 0xFF)]
+    end
+    def translate({:TB, operand, [bit, addr]}) do
+        case operand do
+            :F -> [0x7049, 0xC000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :I -> [0x7038, 0xC000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :Q -> [0x7038, 0xC000 + ((bit &&& 0xF) <<< 8) + ((addr+0x80) &&& 0xFF)]
+            :RI -> [0x7047, 0xC000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :RJ -> [0x701E, 0xC000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :RS -> [0x7057, 0xC000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :RT -> [0x700E, 0xC000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :T -> [0x7025, 0xC000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+        end
+    end    
+    def translate({:TBN, operand, [bit, addr]}) do
+        case operand do
+            :C -> [0x7015, 0x8000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :D -> [0x7046, 0x8000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :F -> [0x7049, 0x8000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :I -> [0x7038, 0x8000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :Q -> [0x7038, 0x8000 + ((bit &&& 0xF) <<< 8) + ((addr+0x80) &&& 0xFF)]
+            :RI -> [0x7047, 0x8000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :RJ -> [0x701E, 0x8000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :RS -> [0x7057, 0x8000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :RT -> [0x700E, 0x8000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :T -> [0x7025, 0x8000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+        end
+    end
+    def translate({:TAK, _, _}) do
+        [0x7002]
+    end
+    def translate({:TDI, operand, _}) do
+        case operand do
+            :A1 -> [0x680F]
+            :A2 -> [0x682F]
+            :BA -> [0x689F]
+            :BR -> [0x68AF]
+            :SA -> [0x684F]
+        end
+    end
+    def translate({:TIR, _, [w0]}) do
+        [0x4800 + (w0 &&& 0xF)]
+    end
+    def translate({:TNB, _, [w0]}) do
+        [0x0300 + (w0 &&& 0xFF)]
+    end
+    def translate({:TNW, _, [w0]}) do
+        [0x4300 + (w0 &&& 0xFF)]
+    end
+    def translate({:TRD, _, [w0]}) do
+        [0x6805, w0 &&& 0xFFFF]
+    end
+    def translate({:TRW, _, [w0]}) do
+        [0x6803, w0 &&& 0xFFFF]
+    end
+    def translate({:TSC, _, [w0]}) do
+        [0x78CD, w0 &&& 0xFFFF]
+    end
+    def translate({:TSG, _, [w0]}) do
+        [0x78CE, w0 &&& 0xFFFF]
+    end
+    def translate({:TW_CD, _, [w0]}) do
+        [0x78ED, w0 &&& 0xFFFF]
+    end
+    def translate({:TW_CW, _, [w0]}) do
+        [0x78DD, w0 &&& 0xFFFF]
+    end
+    def translate({:TW_GD, _, [w0]}) do
+        [0x78EE, w0 &&& 0xFFFF]
+    end
+    def translate({:TW_GW, _, [w0]}) do
+        [0x78DE, w0 &&& 0xFFFF]
+    end
+    def translate({:TXB, _, _}) do
+        [0x701F]
+    end
+    def translate({:TXW, _, _}) do
+        [0x700F]
+    end
+    def translate({:TY_CB, _, [w0]}) do
+        [0x788D, w0 &&& 0xFFFF]
+    end
+    def translate({:TY_CD, _, [w0]}) do
+        [0x78AD, w0 &&& 0xFFFF]
+    end
+    def translate({:TY_CW, _, [w0]}) do
+        [0x789D, w0 &&& 0xFFFF]
+    end
+    def translate({:TY_GB, _, [w0]}) do
+        [0x788E, w0 &&& 0xFFFF]
+    end
+    def translate({:TY_GD, _, [w0]}) do
+        [0x78AE, w0 &&& 0xFFFF]
+    end
+    def translate({:TY_GW, _, [w0]}) do
+        [0x789E, w0 &&& 0xFFFF]
+    end
+    def translate({:XOW, _, _}) do
+        [0x5100]
+    end
+    def translate({:rpar, _, _}) do
+        [0xBF00]
+    end
+    def translate({:assign, operand, [bit, addr]}) do
+        case operand do
+            :D -> [0x783F, 0x6000 + ((bit &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :F -> [0x9000 + (((bit + 0x8) &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :I -> [0x9000 + (((bit + 0x8) &&& 0xF) <<< 8) + (addr &&& 0xFF)]
+            :Q -> [0x9000 + (((bit + 0x8) &&& 0xF) <<< 8) + ((addr + 0x80) &&& 0xFF)]
+            :S -> [0x783B, (((bit + 0x8) &&& 0xF) <<< 12) + (addr &&& 0xFF)]
+        end
+    end
+    def translate({:equal, _, [w0]}) do
+        [0x1F00 + (w0 &&& 0xFF)]
+    end
+
 end
