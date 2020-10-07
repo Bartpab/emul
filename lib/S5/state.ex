@@ -1,9 +1,23 @@
-defmodule Emulators.S5.StateManager do
+defmodule Emulators.S5.Errors.UnexistingBlockError do
+    defexception message: "Block does not exist."
+end
+
+defmodule Emulators.S5.Errors.RewriteBlockError do
+    defexception message: "The block cannot be rewritten."
+end
+
+defmodule Emulators.S5.Errors.MemoryExhaustedError do
+    defexception message: "No more memory."
+end
+
+defmodule Emulators.S5.State do
   use Bitwise
-  import Emulators.S5.Guards
+
+  alias Emulators.S5.Block
 
   def new() do
       sizes = %{
+          USER: 0xFA00,
           DB: 0x5D7F,
           DB0: 0x67F,
           S_FLAGS: 0x3FF,
@@ -19,6 +33,7 @@ defmodule Emulators.S5.StateManager do
       }
 
       ptrs = %{
+          USER:      0x0000,
           DB:        0x8000,
           DB0:       0xDD80,
           S_FLAGS:   0xE400,
@@ -28,10 +43,24 @@ defmodule Emulators.S5.StateManager do
           TIMERS:    0xED00,
           FLAGS:     0xEE00,
           PII:       0xEF00,
-          PIQ:       0xEF80,
+          PIQ:       0xEF80,          
       }
 
+      # Set Data Blocks Table Ptr
+      tables = %{}
+      tables = tables
+        |> Map.put(:DX, ptrs[:DB0])
+        |> Map.put(:FX, ptrs[:DB0] + 0x100)
+        |> Map.put(:DB, ptrs[:DB0] + 0x100 * 2)
+        |> Map.put(:SB, ptrs[:DB0] + 0x100 * 3)
+        |> Map.put(:PB, ptrs[:DB0] + 0x100 * 4)
+        |> Map.put(:FB, ptrs[:DB0] + 0x100 * 5)
+        |> Map.put(:OB, ptrs[:DB0] + 0x100 * 6)
+
+      ptrs = ptrs |> Map.put(:BLOCK_TABLE, tables)
+
       %{
+          mode: :POWER_OFF,
           memory: List.duplicate(0, 0xFFFF),
           registers: %{
               ACCU_1_H: 0x0000,
@@ -41,14 +70,15 @@ defmodule Emulators.S5.StateManager do
               BSP: 0x0000,
               DBA: 0x0000,
               DBL: 0x0000,
+              SAC: 0x0000,
               ACCU_3_H: 0x0000,
               ACCU_3_L: 0x0000,
               ACCU_4_H: 0x0000,
               ACCU_5_L: 0x0000,
               CC: 0x0000
           },
-
           specs: %{
+              special_function_OB: 40
               ptr: ptrs,
               size: sizes,
               regmap: %{
@@ -64,27 +94,155 @@ defmodule Emulators.S5.StateManager do
                   11 => :ACCU_4_H,
                   12 => :ACCU_4_L
               }
-          },
-
-          sm: __MODULE__
+          }
       }
   end
 
-  def write_memory(%{:memory => memory} = state, address, value) do
-      Map.put(state, :memory, List.update_at(memory, address, value))
+  # Blocks-related Functions
+  def iterate_blocks(state, area, fb, fend \\ fn state, address, memory -> state) 
+  when area in [:DB, :USER]
+  do
+    ptr = state[:specs][:ptr][:USER]
+    iterate_blocks(state, {fb, fend}, ptr, take_area(state, address))
   end
 
-  def read_memory(%{:memory => memory}, address) do
-      memory[address]
+  def iterate_blocks(state, {fb, fend}, address, memory) do
+    case Block.read(memory) do
+        {:ok, block} ->
+            size = block[:size]
+            new_address = address + size
+            {_, new_memory} = Enum.split(memory, size)
+            fb.(
+                block, 
+                address, 
+                fn -> iterate_blocks(state, {fb, fend}, new_address, new_memory)
+            )
+        _-> fend.(state, address, memory)
+    end
+  end
+
+  def registered_blocks(state, block_type) do
+    size = cond block_type do
+        :OB -> 48
+        _ -> 256
+    end
+
+    base = state[:specs][:ptr][:BLOCK_TABLE][block_type]
+
+    state[:memory] 
+        |> Enum.slice(base, size)
+  end
+
+  def block_entry(state, block_type, index, from_header \\ false) do
+    addr = state   
+        |> registered_blocks(block_type)
+        |> Enum.fetch!(index)
+    
+    unless from_header do
+        addr -= 6
+    end
+    addr
+  end
+
+  def register_block(state, block_type, index, address) do
+    state |> write(index, address)
+  end
+
+  def set_block_validity!(state, type, index) do
+    block = take_block!(state, type, index) |> Block.set_validity(1)
+    state |> rewrite_block!(block)
+  end
+
+  def take_block!(%{:memory => memory} = state, type, index) do
+    address = block_entry(state, type, index, flag, true)
+    
+    unless address > 0 do
+        raise Emulators.S5.Errors.UnexistingBlockError, message: "Block #{type} n°#{index} does not exist."
+    end
+
+    Block.read!(memory |> Enum.slice(address..-1))
+  end
+
+  def write_block!(%{memory => memory} = state, block, area \\ :USER) 
+  when area in [:USER, :DB]
+  do
+    {address, left} = state |> iterate_blocks(
+        :USER,
+        fn _, _, next() -> next() end,
+        fn _, address, memory -> {address, memory} end 
+    )
+
+    data = Block.write(block)
+    data_size = Enum.count(data)
+    left_size = Enum.count(memory)
+
+    unless data_size <= left_size do
+        raise Emulators.S5.Errors.MemoryExhaustedError, message: "No more memory available to write block."
+    end
+
+    state |> write(address, data)
+  end
+
+  def rewrite_block!(%{:memory => memory} = state, block) do
+    headers = block[:headers]
+    type = headers[:type]
+    id = headers[:id]
+    new_block_size = headers[:size]
+
+    address = block_entry(state, type, id, true)
+    
+    unless address > 0 do
+        raise Emulators.S5.Errors.UnexistingBlockError, message: "Block #{type} n°#{index} does not exist."
+    end
+    
+    old_block = take_block!(state, type, id)
+    old_block_size = old_block[:headers][:size]
+    
+    unless new_block_size == old_block_size do
+        raise Emulators.S5.Errors.RewriteBlockError, message: "Cannot rewrite block #{type} at #{id} as their block sizes do not match."
+    end
+
+    state |> write_memory(address, Block.write(block))
+  end
+
+  def take_area(state, area)
+  do
+    memory = state[:memory]
+    size = state[:specs][:sizes][area]
+    base = state[:specs][:sizes][area]
+
+    memory |> Enum.slice(base, size)
+  end
+
+  def change_mode(state, mode) do
+    state |> Map.put(:mode, mode)
+  end
+
+  def write(%{:memory => memory} = state, address, values) when is_list(values) do
+    for {value, index} <- (values |> Enum.with_index) do
+        state = state |> write(address + index, value)
+    end   
+    state
+  end
+
+  def write(%{:memory => memory} = state, address, value) do
+    state |> Map.put(
+            :memory, 
+            memory |> List.update_at(address, fn _ -> value end)
+        )
+  end
+
+  def read(%{:memory => memory}, address) do
+    memory |> Enum.fetch!(address)
   end
 
   def get(%{:registers => registers}, :RLO) do
-      registers[:CC] &&& 0b10 >>> 1
+      (registers[:CC] &&& 0b10) >>> 1
   end
 
   def set(%{:registers => registers} = state, :RLO, value) do
-      cc = registers[:CC] &&& (~~~0b10) + ((value &&& 0b1) <<< 1)
-      state |> Map.update!(:registers, (registers |> Map.update!(:CC, cc)))
+      cc = (registers[:CC] &&& (~~~0b10)) + ((value &&& 0b1) <<< 1)
+      state |> Map.put(:registers, (registers |> Map.put(:CC, cc)))
   end
 
   def base(%{:specs => %{:ptr => ptr}}, operand) do
@@ -96,80 +254,110 @@ defmodule Emulators.S5.StateManager do
       end
   end
 
-  # Bit access with 8-bits and 16-bits memory cases
-  def get(%{:sm => sm} = state, operand, [bit, address])
-  when operand in [:I, :Q, :F, :S, :D] do
-      base = state|> sm.base(operand)
-      ((state |> sm.read_memory(base + address)) >>> bit) &&& 1
+  def bpush(state, block_type, block_id):
+  do
+    block = state |> get_block(block_type, block_id)
   end
 
-  def set(%{:sm => sm} = state, operand, [bit, address], value)
-  when operand in [:I, :Q, :F, :S, :D]
-  do
-      value = (value &&& 1) <<< bit
-      base = state|> sm.base(operand)
-      abs_address = base + address
-      new_value = sm.read_memory(state, abs_address) &&& (~~~(0b1 <<< bit)) # Reset the bit
-      new_value = new_value + value
-      state |> sm.write_memory(abs_address, new_value)
+  def abs(state, operand, address) do
+    base = base(state, operand)
+    cond do
+        operand in [:I, :Q, :F, :S, :D] -> base + address
+        operand in [:IW, :QW, :FW, :SW] -> base + address * 2
+        operand in [:ID, :QD, :FD, :SD] -> base  + address * 4
+        true -> base + address
+    end
   end
 
-  # Word access with 8-bits memory cases
-  def get(%{:sm => sm} = state, operand, [address])
-  when operand in [:IW, :QW, :FW, :SW]
+  def get(state, operand, args)
   do
-      base = state |> sm.base(operand)
-      abs_address = address * 2
+    cond do
+        operand in [:I, :Q, :F, :S, :D] ->
+            [bit, address] = args
+            abs = abs(state, operand, address)
+            ((state |> read(abs)) >>> bit) &&& 1
+        
+        # Byte access with 8-bits memory cases
+        operand in [:IB, :QB, :FY, :SY] ->
+            [address] = args
+            abs = abs(state, operand, address)            
+            read(state, abs)
 
-      low = sm.get(state, operand, abs_address) &&& 0xFF
-      high = (sm.get(state, operand, abs_address) &&& 0xFF) <<< 8
+        # Word access with 8-bits memory cases
+        operand in [:IW, :QW, :FW, :SW] ->
+            [address] = args
+            abs = abs(state, operand, address)
 
-      high + low
+            low = read(state, abs) &&& 0xFF
+            high = (read(state, abs + 1) &&& 0xFF) <<< 8
+      
+            high + low
+        # D-Word access with 8-bits memory cases
+        operand in [:ID, :QD, :FD, :SD] ->
+            [address] = args
+            
+            abs = abs(state, operand, address)
+
+            b0 = read(state, abs)
+            b1 = read(state, abs + 1)
+            b2 = read(state, abs + 2)
+            b3 = read(state, abs + 3)
+
+            [b1 + b0, b2 + b3]
+    end
   end
 
-  def set(%{:sm => sm} = state, operand, [address], value)
-  when operand in [:IW, :QW, :FW, :SW, :PW, :OW]
+  def set(state, operand, args, values)
   do
-      low = value &&& 0xFF
-      high = (value &&& 0xFF00) >>> 8
+        cond do
+            operand in [:I, :Q, :F, :S, :D] ->
+                value = values
+                [bit, address] = args
+                abs = abs(state, operand, address)
 
-      base = state |> sm.base(operand)
-      abs_address = address * 2
+                value = (value &&& 1) <<< bit
+                value = (read(state, abs) &&& (~~~(0b1 <<< bit))) + value
 
-      state
-          |> sm.write_memory(abs_address, low)
-          |> sm.write_memory(abs_address, high)
-  end
+                state 
+                    |> write(abs, value)
+            
+            operand in [:IB, :QB, :FY, :SY] ->
+                value = values
+                [address] = args
+                abs = abs(state, operand, address)
 
-  # D-Word access with 8-bits memory cases
-  def get(%{:sm => sm} = state, operand, [address])
-  when operand in [:ID, :QD, :FD, :SD, :PD, :OD]
-  do
-      base = state |> sm.base(operand)
-      abs = address * 4
+                state 
+                    |> write(abs, value)
 
-      b0 = sm.read_memory(state, abs)
-      b1 = sm.read_memory(state, abs) <<< 8
-      b2 = sm.read_memory(state, abs)
-      b3 = sm.read_memory(state, abs) <<< 8
+            operand in [:IW, :QW, :FW, :SW] ->
+                value = values
+                [address] = args
 
-      [b1 + b0, b2 + b3]
-  end
-  def set(%{:sm => sm} = state, operand, [address], [w0, w1])
-  when operand in [:ID, :QD, :FD, :SD, :PD, :OD]
-  do
-      base = state |> sm.base(operand)
-      abs = address * 4
+                abs = abs(state, operand, address)
 
-      b0 = w0 &&& 0xFF
-      b1 = (w0 &&& 0xFF00) >>> 8
-      b2 = w1 &&& 0xFF
-      b3 = (w0 &&& 0xFF00) >>> 8
+                high = (0xFF00 &&& value) >>> 8
+                low = 0x00FF &&& value
 
-      state
-          |> sm.write_memory(abs, b0)
-          |> sm.write_memory(abs, b1)
-          |> sm.write_memory(abs, b2)
-          |> sm.write_memory(abs, b3)
+                state 
+                    |> write(abs, low)
+                    |> write(abs + 1, high)
+
+            operand in [:ID, :QD, :FD, :SD] ->
+                [address] = args
+                [w0, w1] = values
+
+                abs = abs(state, operand, address)
+        
+                b0 = w0 &&& 0xFF
+                b1 = (w0 &&& 0xFF00) >>> 8
+                b2 = w1 &&& 0xFF
+                b3 = (w0 &&& 0xFF00) >>> 8
+        
+                state
+                    |> write(abs, b0)
+                    |> write(abs, b1)
+                    |> write(abs, b2)
+                    |> write(abs, b3)             
+        end
   end
 end

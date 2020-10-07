@@ -37,8 +37,16 @@ defmodule Emulators.S5.Block do
             _ -> raise "Wrong validity infos."
         end
     end
+    
+    def read(memory) when is_list(memory) do
+        try do
+            {:ok, read!(memory)}
+        rescue
+            _ -> {:nok, nil}
+        end
+    end
 
-    def read_block(memory) when is_list(memory) do
+    def read!(memory) when is_list(memory) do
         [w0, w1, w2, w3, w4] = memory |> Enum.take(@header_size)
 
         unless w0 == @block_magic do
@@ -64,10 +72,25 @@ defmodule Emulators.S5.Block do
             lids: lids
         }, body: body}
     end
+    
+    def set_validity(block, flag) do
+        block 
+            |> Map.put(
+                :headers, 
+                Map.put(block[:headers], :validity, flag)
+            )
+    end
 
-    def write_block(id, type, pids, lids, body) do
+    def write(block) do
+        id = block[:headers][:id]
+        type = block[:headers][:type]
+        validity = block[:headers][:validity]
+        pids = block[:headers][:pids]
+        lids = block[:headers][:lids]
+        body = block[:body]
+
         size = @header_size + (body |> Enum.count)
-        infos = (0b00 <<< 6) + Emulators.S5.Block.reverse_block_type(type)
+        infos = (validity <<< 6) + Emulators.S5.Block.reverse_block_type(type)
         [lid0, lid1] = lids
 
         w0 = 0x7070
