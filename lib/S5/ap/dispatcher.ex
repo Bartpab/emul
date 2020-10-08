@@ -1,6 +1,6 @@
 defmodule Emulators.S5.Dispatcher do
     use Bitwise
-    alias Emulators.S5.State
+    alias Emulators.S5.AP.State
 
     # A
     def dispatch(state, {:A, operand, args})

@@ -1,4 +1,4 @@
-defmodule Emulators.S5.Translator do
+defmodule Emulators.S5.AP.Disassembler do
   use Bitwise
 
   def translate([w0 | _]) when (w0 >>> 8) == 0xB8 do

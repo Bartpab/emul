@@ -1,93 +1,175 @@
+defmodule Emulators.Supervisor do
+    use Emulators.COM
 
-defmodule Emulators.S5.Firmware do
-    use Emulators.S5.Block
-
-    def load_blocks(state):
-    do
-        state |> State.iterate_blocks(
-            :USER,
-            fn state, block, address, next -> 
-                type = block[:type]
-                size = block[:size]
-                id = block[:id]
-                state 
-                    |> State.set_block_entry(type, id, address + 6)
-                    |> State.set_block_validity!(type, id, 1)
-                    |> next()
-            end
-        )
-    end
- 
-    def process(%{:mode => :RUN} = state)
-    do
-    end
-    
-    def process(%{:mode => :RESTART} = state)
-    do
-    end
-
-    def process(%{:mode => :POWER_ON} = state)
-    do
-        state |> State.change_mode(:OVERALL_RESET)
-    end
-
-    def process(%{
-        :mode => :OVERALL_RESET
-        :specs => %{
-            :ptr => %{
-                :DB0 => db0,
-                :PIQ => piq,
-                :PII => pii,
-                :FLAGS => flags,
-                :TIMERS => timers,
-                :COUNTERS => counters,
-                :RI => ri,
-                :BLOCK_TABLE => btable
+    def new() do
+        %{
+            supervisor: %{
+                devices: []
             }
-        }    
-    } = state)
-    do  
-        state
-            |> State.set(:RS, 12, pii)
-            |> State.set(:RS, 13, piq)
-            |> State.set(:RS, 14, flags)
-            |> State.set(:RS, 15, timers)
-            |> State.set(:RS, 16, counters)
-            |> State.set(:RS, 17, ri)
-            |> State.set(:RS, 32, btable[:DX])
-            |> State.set(:RS, 33, btable[:FX])
-            |> State.set(:RS, 34, btable[:DX])
-            |> State.set(:RS, 35, btable[:SB])
-            |> State.set(:RS, 36, btable[:PB])
-            |> State.set(:RS, 37, btable[:FB])
-            |> State.set(:RS, 38, btable[:OB])
-            |> load_blocks
-            |> State.set_mode(:STOP)
+        }
     end
 
-    
-    def process(%{:mode => :POWER_OFF} = state)
-    do
+    def supervise(state, {id, pid}) do
+        devices = get_in(state, [:supervisor, :devices])
+        put_in(
+            state, [:supervisor, :devices], [devices | [%{
+                id: id,
+                pid: pid, 
+                exp: NaiveDateTime.utc_now() |> NaiveDateTime.add(1, :second)
+                state: :IDLE,
+                attempts: 0
+            }]
+        ])       
+    end
+
+    def update(state, device) do
+        now = NaiveDateTime.utc_now()
+
+        case NaiveDateTime.compare(now, device[:exp]) do
+            :lt ->
+                case device[:state] do
+                    :ALIVE ->
+                        device = device |> Map.put(:state, :ALIVE?)
+                            |> Map.put(:exp, NaiveDateTime.utc_now() |> NaiveDateTime.add(5, :second))
+                        state = state |> 
+                end
+            _ -> {state, device}
+        end
+    end
+
+    def manage(state, devices) do
+        case devices do
+            [device | devices] ->
+                {state, device} = update(state, device)
+                {state, tail} = manage(state, devices)
+                {state, [[device] | tail]}
+            [] -> {state, []}
+        end
+    end
+
+    def frame(state) do
+        state |> manage
+    end
+end
+
+defmodule Emulators.Device do
+    def process(state, msg, from) do
+        case msg do
+            {:GET, :STATE} -> 
+                state = state |> Emulators.COM.send(from, {:STATE, state})
+                {:pass, state}
+            :PING ->
+                state = state |> Emulators.COM.send(from, :PONG)
+                {:pass, state}              
+            _ -> {:keep, state}
+        end
+    end
+
+    defmacro __using__(_) do
+        quote do
+            def new(id \\ UUID.uuid4(), opts \\ nil) do
+                pid = spawn fn -> 
+                    :ets.new(id, [:set, :named_table, :protected])
+                    start(opts) 
+                        |> Map.merge(Emulators.COM.new())        
+                        |> loop() 
+                end
+                {id, pid}
+            end
+            
+            def relaunch(id) do
+                :ets.lookup(id, :state)
+            end
+
+            def loop(state) do
+                loop(
+                    :ets.insert(self(), {:state, state})
+                    state 
+                        |> Emulators.COM.poll(&Emulators.Device.process/3)
+                        |> frame
+                        |> Emulators.COM.clear_recv
+                        |> Emulators.COM.send_messages
+                )
+            end
+        end
+    end
+end
+
+
+defmodule Emulators.S5.AP do
+    use Emulators.Device
+
+    alias Emulators.S5.AP.State
+    alias Emulators.S5.AP.Firmware
+
+    def start() do
+        State.new()
+    end
+
+    def restart(state) do
         state
+    end
+
+    def frame(state) do
+        state |> Firmware.frame
     end
 end
 
 defmodule Emulators.S5.AS do
-    alias Emulators.S5.State
-    alias Emulators.S5.Firmware
-    alias Emulators.S5.Translator
+    use Emulators.Supervisor
+    use Emulators.Device
+    use Emulators.COM
 
-    def new() do
-        State.new
+    alias Emulators.S5.AP
+
+    def start(id \\ nil) do
+        state = %{
+            :cluster => cluster, 
+            :id => id,
+            :AP => []
+        }  | Map.merge!(Supervisor.new())
     end
 
-    def power_on(state)
-    do
-        state |> State.set_mode(:POWER_ON)
+    def create(state, :AP) do
+        aps = [get_in(state, [:AP]) | [AP.new()]]
+        put_in(state, [:AP], aps)
     end
 
-    def run(state)
-    do
-        state |> Firmware.process
+    def process(state, message, _from) do
+        case message do
+            {:AS, :CREATE, :AP}-> 
+                {:pass, state}
+        end
     end
+    
+    def frame(state) do
+        state = state |> poll(&process/3)
+        self() |> :ets.insert({:state, state})
+        state     
+    end
+end
+
+defmodule Emulators.Cluster do
+    use Emulators.Supervisor
+    use Emulators.Device
+
+    def start(_) do
+        %{}
+    end
+
+    def process(state, message, from) do
+        case message do
+            {:CREATE, :AS} ->
+                state
+                |> Supervisor.register(AS.new())
+        end
+        {:pass, state}
+    end
+    
+    def frame(state) do
+        state
+            |> Supervisor.frame 
+            |> poll(&process/3)
+    end
+
 end

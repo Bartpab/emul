@@ -1,4 +1,4 @@
-defmodule Emulators.S5.Assemble do
+defmodule Emulators.S5.Assembler do
     use Bitwise
 
     def translate({:A, operand, args}) do

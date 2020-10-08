@@ -4,6 +4,22 @@ defmodule Emulators.S5.Block do
     @header_size 6
     @block_magic 0x7070
 
+    def body_base(address) do
+        address + 6
+    end
+
+    def id(block) do
+        get_in(block, [:headers, :id])
+    end
+
+    def type(block) do
+        get_in(block, [:headers, :type])
+    end
+
+    def size(block) do
+        get_in(block, [:headers, :size])
+    end
+
     def get_block_type(infos) do
         case infos &&& 0x3F do
             0x01 -> :DB
@@ -55,8 +71,8 @@ defmodule Emulators.S5.Block do
 
         infos = (w1 >>> 8)
         id = (w1 &&& 0xFF)
-        type = Emulators.S5.Block.get_block_type(infos)
-        validity = Emulators.S5.Block.get_block_validity(infos)
+        type = get_block_type(infos)
+        validity = get_block_validity(infos)
         pids = (w2 >>> 8)
         lids = [w2 &&& 0xFF, w3]
         size = w4
@@ -90,7 +106,7 @@ defmodule Emulators.S5.Block do
         body = block[:body]
 
         size = @header_size + (body |> Enum.count)
-        infos = (validity <<< 6) + Emulators.S5.Block.reverse_block_type(type)
+        infos = (validity <<< 6) + reverse_block_type(type)
         [lid0, lid1] = lids
 
         w0 = 0x7070

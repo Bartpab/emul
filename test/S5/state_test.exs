@@ -1,7 +1,8 @@
 defmodule EmulatorsTest.S5.State do
   use ExUnit.Case
   use Bitwise
-  alias Emulators.S5.State
+  
+  alias Emulators.S5.AP.State
   doctest Emulators
 
   test "new" do
