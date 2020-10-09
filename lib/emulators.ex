@@ -18,6 +18,8 @@ end
 defmodule Emulators.Devices do
     use GenServer
 
+    alias Emulators.DeviceSupervisor
+
     def start_link(args) do
         GenServer.start_link(__MODULE__, args, name: __MODULE__)
     end
@@ -29,8 +31,11 @@ defmodule Emulators.Devices do
 
     def start(device, opts \\ []) do
         device_id = String.to_atom("device_#{new()}")
-        {:ok, pid} = DynamicSupervisor.start_child(Emulators.DeviceSupervisor, {device, {device_id, opts}})
-        Process.register(pid, device_id)
+        
+        {:ok, pid} = DynamicSupervisor.start_child(
+            DeviceSupervisor, {device, {device_id, opts}}
+        )
+
         {:ok, device_id}
     end
 
@@ -53,12 +58,14 @@ defmodule Emulators.Devices do
     
     @impl true
     def handle_cast({:bind, pid, id}, {counter, register, reverse}) do
+        Process.register(pid, id)
+
         register = register 
             |> Map.put(id, pid)
         
         reverse = reverse
             |> Map.put(pid, id)
-
+            
         {:noreply, {counter, register, reverse}}
     end
 

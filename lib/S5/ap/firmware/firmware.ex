@@ -1,6 +1,8 @@
 defmodule Emulators.S5.AP.Firmware do  
     alias Emulators.S5.Block
+    alias Emulators.Device
     alias Emulators.S5.AP.State, as: APS
+    alias Emulators.State, as: ES
     alias Emulators.S5.AP.Firmware.SpecialFunctions
 
     def load_blocks(state)
@@ -47,37 +49,43 @@ defmodule Emulators.S5.AP.Firmware do
 
     def process_transition(state, transition) do
         case transition do
+            {:POWER_OFF, _} ->
+                state
+                    |> Device.set_mode(:IDLE)
             {:POWER_ON, _} ->
                 state 
                     |> init_system_area
                     |> load_blocks
                     |> APS.set_mode(:STOP)
+            {:STOP, _} ->
+                state
+                    |> Device.set_mode(:IDLE)
             _ -> 
                 state
         end
     end
 
-    def process_message(state, msg) do
+    def process_message(state, msg, _from) do
         case msg do
             :POWER_ON -> state |> APS.set_mode(:POWER_ON)
             _-> state
         end
     end
 
-    def frame(state) do
-        try do
-            {msg, state} = Emulator.State.poll_message(state)
-            cond do
-                msg != :empty ->
-                    state 
-                        |> process_message(msg)
-                        |> frame
+    def init(state) do
+        state
+            |> APS.set_mode(:POWER_OFF)
+    end
 
-                EmulatorState.has_interrupt(state) ->
-                    interrupt = EmulatorState.get_interrupt(state)
+    def frame(state) do
+        state = state |> Emulators.COM.dispatch(&process_message/3)
+        try do
+            cond do
+                ES.has_interrupt(state) ->
+                    interrupt = ES.get_interrupt(state)
                     state 
                          |> process_interrupt(interrupt)
-                         |> EmulatorState.clear_interrupt
+                         |> ES.clear_interrupt
                 
                 APS.has_mode_changed(state) ->
                     state

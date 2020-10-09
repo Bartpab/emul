@@ -51,7 +51,7 @@ defmodule Emulators.S5.AP.State do
       ptrs = ptrs |> Map.put(:BLOCK_TABLE, tables)
 
       %{
-          mode: :POWER_OFF,
+          mode: nil,
           prev_mode: nil,
           changed_mode: false,
           

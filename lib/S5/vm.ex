@@ -1,4 +1,8 @@
 defmodule Emulators.Device do
+    def set_mode(state, mode) do
+        put_in(state, [:device, :mode], mode)
+    end
+
     def process(state, msg, from) do
         case msg do
             {:GET, :STATE} -> 
@@ -14,32 +18,30 @@ defmodule Emulators.Device do
 
     defmacro __using__(_) do
         quote do
-            def child_spec({id, opts}) do
-                %{
-                    id: id,
-                    start: {__MODULE__, :start_link, [id, opts]}
-                }
-            end
-        
-            def start_link(id, opts) do
-                pid = spawn fn -> 
-                    start(opts) 
-                        |> Map.merge(%{device: %{id: id}})
-                        |> Map.merge(Emulators.COM.new())        
-                        |> loop() 
-                end
-                Emulators.Devices.bind(pid, id)
-                {:ok, pid}
+            use Task, restart: :temporary
+
+            def start_link({id, opts} = arg) do
+                Task.start_link(__MODULE__, :run, [arg])
+              end
+
+            def run({id, opts}) do
+                Emulators.Devices.bind(self(), id)
+                
+                start(opts) 
+                    |> Map.merge(%{device: %{id: id, mode: :RUN}})
+                    |> Map.merge(Emulators.COM.new())      
+                    |> init  
+                    |> loop 
             end
             
             def snapshot(state) do
-                Emulators.StateStash.save(state)
+                spawn fn -> Emulators.StateStash.save(state) end
                 state
             end
 
             def loop(state) do
                 state = state 
-                    |> Emulators.COM.poll
+                    |> Emulators.COM.poll([], state[:device][:mode] == :IDLE)
                     |> Emulators.COM.dispatch(&Emulators.Device.process/3)
                     |> frame
                     |> Emulators.COM.commit
@@ -62,21 +64,11 @@ defmodule Emulators.S5.AP do
         State.new()
     end
 
+    def init(state) do
+        state |> Firmware.init
+    end
+
     def frame(state) do
         state |> Firmware.frame
-    end
-end
-
-defmodule Emulators.S5.AS do
-    use Emulators.Device
-    use Emulators.COM
-
-    def start(_) do
-        %{}
-    end
-
-    
-    def frame(state) do
-        state
     end
 end

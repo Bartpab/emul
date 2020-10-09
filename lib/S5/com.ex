@@ -22,14 +22,22 @@ defmodule Emulators.COM do
         )
     end
     
-    def poll(state, messages \\ []) do
-        receive do
-            msg ->
-                state |> poll(messages ++ [msg])
-        after
-            0 -> state
-                |> put_in([:COM, :recv], messages)
+    def poll(state, messages \\ [], block \\ false) do
+        if block do
+            receive do
+                msg ->
+                    state |> poll(messages ++ [msg])
+            end
+        else
+            receive do
+                msg ->
+                    state |> poll(messages ++ [msg])
+            after
+                0 -> state
+                    |> put_in([:COM, :recv], messages)
+            end
         end
+
     end
 
     def commit(state) do
@@ -55,11 +63,15 @@ defmodule Emulators.COM do
     def dispatch(state, callback, messages, keep \\ []) do
         case messages do
             [msg | tail] ->
-                {payload, from} = msg
-                {result, state} = callback.(state, payload, from)
-                case result do
-                    :keep -> dispatch(state, callback, tail, keep ++ [{payload, from}])
-                    :pass -> dispatch(state, callback, tail, keep)
+                case msg do
+                    {:system, {from, _}, :get_status} ->
+                        send from, state
+                    {payload, from} ->
+                    {result, state} = callback.(state, payload, from)
+                    case result do
+                        :keep -> dispatch(state, callback, tail, keep ++ [{payload, from}])
+                        :pass -> dispatch(state, callback, tail, keep)
+                    end
                 end
             [] ->
                 state 
