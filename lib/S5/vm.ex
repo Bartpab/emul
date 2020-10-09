@@ -19,6 +19,7 @@ defmodule Emulators.Device do
     defmacro __using__(_) do
         quote do
             use Task, restart: :temporary
+            alias Emulators.Device 
 
             def start_link({id, opts} = arg) do
                 Task.start_link(__MODULE__, :run, [arg])
@@ -28,26 +29,26 @@ defmodule Emulators.Device do
                 Emulators.Devices.bind(self(), id)
                 
                 start(opts) 
-                    |> Map.merge(%{device: %{id: id, mode: :RUN}})
+                    |> Map.merge(%{device: %{id: id, mode: :IDLE}})
                     |> Map.merge(Emulators.COM.new())      
                     |> init  
                     |> loop 
-            end
-            
-            def snapshot(state) do
-                spawn fn -> Emulators.StateStash.save(state) end
-                state
             end
 
             def loop(state) do
                 state = state 
                     |> Emulators.COM.poll([], state[:device][:mode] == :IDLE)
                     |> Emulators.COM.dispatch(&Emulators.Device.process/3)
-                    |> frame
+                    |> update
                     |> Emulators.COM.commit
                     |> Map.put(:last_tick, NaiveDateTime.utc_now)
-                    |> snapshot
                     |> loop
+            end
+
+            def update(state) do
+                {state, code} = state |> frame
+                state 
+                    |> Device.set_mode(code)
             end
         end
     end
@@ -69,6 +70,7 @@ defmodule Emulators.S5.AP do
     end
 
     def frame(state) do
-        state |> Firmware.frame
+        # state |> Firmware.frame
+        {state, :IDLE}
     end
 end
