@@ -7,7 +7,8 @@ defmodule Emulators.Device do
             :PING ->
                 state = state |> Emulators.COM.send(from, :PONG)
                 {:pass, state}              
-            _ -> {:keep, state}
+            _ -> 
+                {:keep, state}
         end
     end
 
@@ -31,17 +32,20 @@ defmodule Emulators.Device do
                 {:ok, pid}
             end
             
+            def snapshot(state) do
+                Emulators.StateStash.save(state)
+                state
+            end
+
             def loop(state) do
                 state = state 
-                    |> Emulators.COM.poll(&Emulators.Device.process/3)
+                    |> Emulators.COM.poll
+                    |> Emulators.COM.dispatch(&Emulators.Device.process/3)
                     |> frame
-                    |> Emulators.COM.clear_recv
-                    |> Emulators.COM.send_messages
+                    |> Emulators.COM.commit
                     |> Map.put(:last_tick, NaiveDateTime.utc_now)
-
-                state |> Emulators.StateStash.save
-                
-                state |> loop
+                    |> snapshot
+                    |> loop
             end
         end
     end
@@ -66,8 +70,6 @@ end
 defmodule Emulators.S5.AS do
     use Emulators.Device
     use Emulators.COM
-
-    alias Emulators.S5.AP
 
     def start(_) do
         %{}

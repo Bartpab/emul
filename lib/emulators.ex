@@ -1,8 +1,6 @@
 defmodule Emulators.DeviceSupervisor do
     use DynamicSupervisor
 
-    alias Emulators.Services.DeviceRegister
-    
     def start_link(init_arg) do
         DynamicSupervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
     end
@@ -25,24 +23,34 @@ defmodule Emulators.Devices do
     end
 
     @impl true
-    def init(args) do
+    def init(_) do
         {:ok, {0, %{}, %{}}}
     end
 
     def start(device, opts \\ []) do
-        device_id = new()
+        device_id = String.to_atom("device_#{new()}")
         {:ok, pid} = DynamicSupervisor.start_child(Emulators.DeviceSupervisor, {device, {device_id, opts}})
+        Process.register(pid, device_id)
         {:ok, device_id}
     end
 
-    def new() do
+    defp new() do
         GenServer.call(__MODULE__, :new)
+    end
+
+    def all() do
+        GenServer.call(__MODULE__, {:get, :all})
     end
 
     def bind(pid, id) do
         GenServer.cast(__MODULE__, {:bind, pid, id})
     end
 
+    def send_to_device(id, msg, from \\ self()) do
+        pid = GenServer.call(__MODULE__, {:get, :pid, id})
+        send(pid, {msg, from})
+    end
+    
     @impl true
     def handle_cast({:bind, pid, id}, {counter, register, reverse}) do
         register = register 
@@ -58,6 +66,16 @@ defmodule Emulators.Devices do
     def handle_call(:new, _from, {counter, register, reverse}) do
         counter = counter + 1
         {:reply, counter, {counter, register, reverse}}
+    end
+
+    @impl true
+    def handle_call({:get, :all}, _from, {counter, register, reverse}) do
+        {:reply, register, {counter, register, reverse}}
+    end
+
+    @impl true
+    def handle_call({:get, :pid, id}, _from, {counter, register, reverse}) do
+        {:reply, register |> Map.fetch!(id), {counter, register, reverse}}
     end
 end
 

@@ -9,6 +9,7 @@ defmodule Emulators.COM do
             end
         end
     end
+
     def new() do
         %{COM: %{recv: [], sent: []}}
     end 
@@ -17,39 +18,52 @@ defmodule Emulators.COM do
         put_in(
             state, 
             [:COM, :sent], 
-            [get_in(state, [:COM, :sent]) | [{to, {msg, self()}}]]
+            get_in(state, [:COM, :sent]) ++ [{msg, to}]
         )
     end
     
-    def poll(state, callback) do
-        {state, left} = poll(state, callback, state[:COM][:recv], [])
-        state |> put_in([:COM, :recv], left) 
+    def poll(state, messages \\ []) do
+        receive do
+            msg ->
+                state |> poll(messages ++ [msg])
+        after
+            0 -> state
+                |> put_in([:COM, :recv], messages)
+        end
     end
 
-    def clear_recv(state) do
-        state |> put_in([:COM, :recv], []) 
-    end
-
-    def send_messages(state) do
+    def commit(state) do
         state 
             |> get_in([:COM, :sent])
-            |> Enum.each(fn {to, msg} -> send(to, msg) end)
+            |> Enum.each(
+                fn {to, msg} -> 
+                    if is_pid(to) do
+                        send(to, {msg, state[:device][:id]}) 
+                    else
+                        Emulators.Devices.send_to_device(to, msg, state[:device][:id])
+                    end
+                end
+            )
             
         state |> put_in([:COM, :sent], [])
     end
-
-    def poll(state, callback, messages, left) do
+    
+    def dispatch(state, callback) do
+        state |> dispatch(callback, get_in(state, [:COM, :recv]))
+    end
+    
+    def dispatch(state, callback, messages, keep \\ []) do
         case messages do
-            [{msg, from} | tail] ->
-                {result, state} = callback.(state, msg, from)
+            [msg | tail] ->
+                {payload, from} = msg
+                {result, state} = callback.(state, payload, from)
                 case result do
-                    :keep -> poll(state, callback, tail, [left | {msg, from}])
-                    _ -> poll(state, callback, tail, left)
+                    :keep -> dispatch(state, callback, tail, keep ++ [{payload, from}])
+                    :pass -> dispatch(state, callback, tail, keep)
                 end
-            _ ->
-                {state, left}
+            [] ->
+                state 
+                    |> put_in([:COM, :recv], keep)
         end        
     end
-
-
 end
