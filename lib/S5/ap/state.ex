@@ -3,7 +3,7 @@ defmodule Emulators.S5.AP.State do
   use Bitwise
 
   alias Emulators.S5.Block
-  alias Emulators.State, as: ES 
+  alias Emulators.State, as: ES
 
   def new() do
       sizes = %{
@@ -33,12 +33,12 @@ defmodule Emulators.S5.AP.State do
           TIMERS:    0xED00,
           FLAGS:     0xEE00,
           PII:       0xEF00,
-          PIQ:       0xEF80,          
+          PIQ:       0xEF80,
       }
 
       # Set Data Blocks Table Ptr
       tables = %{}
-      
+
       tables = tables
         |> Map.put(:DX, ptrs[:DB0])
         |> Map.put(:FX, ptrs[:DB0] + 0x100)
@@ -50,13 +50,13 @@ defmodule Emulators.S5.AP.State do
 
       ptrs = ptrs |> Map.put(:BLOCK_TABLE, tables)
 
-      %{
+      ap = %{
           mode: nil,
           prev_mode: nil,
           changed_mode: false,
-          
+
           memory: List.duplicate(0, 0xFFFF),
-          
+
           registers: %{
               ACCU_1_H: 0x0000,
               ACCU_1_L: 0x0000,
@@ -72,7 +72,7 @@ defmodule Emulators.S5.AP.State do
               ACCU_5_L: 0x0000,
               CC: 0x0000
           },
-          
+
           specs: %{
               ptr: ptrs,
               size: sizes,
@@ -90,69 +90,72 @@ defmodule Emulators.S5.AP.State do
                   12 => :ACCU_4_L
               }
           }
-      } |> Map.merge(ES.new())
+      }
+
+      %{ap: ap}
+        |> Map.merge(ES.new())
   end
 
   # Base functions
   def mode(state) do
-    get_in(state, [:mode])
+    get_in(state, [:ap, :mode])
   end
 
   def set_mode(state, value) do
-    put_in(state, [:prev_mode], mode(state))
-    put_in(state, [:mode], value)
-    put_in(state, [:changed_mode], true)
+    put_in(state, [:ap, :prev_mode], mode(state))
+    put_in(state, [:ap, :mode], value)
+    put_in(state, [:ap, :changed_mode], true)
   end
 
   def mode_transition(state) do
-    {get_in(state, [:mode]), get_in(state, [:prev_mode])}
+    {get_in(state, [:ap, :mode]), get_in(state, [:ap, :prev_mode])}
   end
 
   def has_mode_changed(state) do
-    get_in(state, [:changed_mode])
+    get_in(state, [:ap, :changed_mode])
   end
 
   def ack_mode(state) do
-    put_in(state, [:changed_mode], false)
+    put_in(state, [:ap, :changed_mode], false)
   end
 
   def ptr(state, area) do
-    get_in(state, [:specs, :ptr, area])
+    get_in(state, [:ap, :specs, :ptr, area])
   end
 
   def set_ptr(state, area, address) do
-    put_in(state, [:specs, :ptr, area], address)
+    put_in(state, [:ap, :specs, :ptr, area], address)
   end
 
   def size(state, area) do
-    get_in(state, [:specs, :size, area])
+    get_in(state, [:ap, :specs, :size, area])
   end
 
   def set_size(state, area, size) do
-    put_in(state, [:specs, :size, area], size)
+    put_in(state, [:ap, :specs, :size, area], size)
   end
 
   def memory(state) do
-    get_in(state, [:memory])
+    get_in(state, [:ap, :memory])
   end
 
   def set_memory(state, memory) do
-    put_in(state, [:memory], memory)
+    put_in(state, [:ap, :memory], memory)
   end
 
   def registers(state) do
-    get_in(state, [:registers])
+    get_in(state, [:ap, :registers])
   end
 
   def set_registers(state, registers) do
-    put_in(state, [:registers], registers)
+    put_in(state, [:ap, :registers], registers)
   end
 
   # Memory-related functions
   def write(state, address, values) when is_list(values) do
     case values do
         [value | values] ->
-            state 
+            state
                 |> write(address, value)
                 |> write(address + 1, values)
         [] -> state
@@ -161,7 +164,7 @@ defmodule Emulators.S5.AP.State do
 
   def write(state, address, value) do
     state |> set_memory(
-            state 
+            state
                 |> memory()
                 |> List.update_at(address, fn _ -> value end)
     )
@@ -188,27 +191,27 @@ defmodule Emulators.S5.AP.State do
 
   # Blocks-related Functions
   def table_address(state, type, index) do
-    state 
+    state
     |> ptr(:BLOCK_TABLE)
     |> Map.fetch(type)
     |> Kernel.+(index)
   end
-  
+
   def register_block(state, type, index, block_address) do
     state |> write(
-            state |> table_address(type, index), 
+            state |> table_address(type, index),
             block_address + 6
     )
   end
 
-  def iterate_blocks(state, area, fb, fend \\ (fn state, _address, _memory -> state end)) 
+  def iterate_blocks(state, area, fb, fend \\ (fn state, _address, _memory -> state end))
   when area in [:DB, :USER]
   do
     base = state |> ptr(:USER)
     riterate_blocks(
-        state, 
-        {fb, fend}, 
-        base, 
+        state,
+        {fb, fend},
+        base,
         take_area(state, area)
     )
   end
@@ -220,8 +223,8 @@ defmodule Emulators.S5.AP.State do
             new_address = address + size
             {_, new_memory} = Enum.split(memory, size)
             fb.(
-                block, 
-                address, 
+                block,
+                address,
                 fn -> iterate_blocks(state, {fb, fend}, new_address, new_memory) end
             )
         _-> fend.(state, address, memory)
@@ -239,7 +242,7 @@ defmodule Emulators.S5.AP.State do
   end
 
   def block_address(state, type, index, from_header \\ false) do
-    value = state   
+    value = state
         |> registered_blocks(type)
         |> Enum.fetch!(index)
     unless from_header do value - 6 else value end
@@ -247,7 +250,7 @@ defmodule Emulators.S5.AP.State do
 
   def take_block!(state, type, index) do
     address = block_address(state, type, index, true)
-    
+
     unless address > 0 do
         raise Emulators.S5.Errors.UnexistingBlockError, message: "Block #{type} n°#{index} does not exist."
     end
@@ -261,14 +264,14 @@ defmodule Emulators.S5.AP.State do
     new_block_size = block |> Block.size
 
     address = state |> block_address(type, index, true)
-    
+
     unless address > 0 do
         raise Emulators.S5.Errors.UnexistingBlockError, message: "Block #{type} #{index} does not exist."
     end
-    
+
     old_block = take_block!(state, type, index)
     old_block_size = old_block |> Block.size
-    
+
     unless new_block_size == old_block_size do
         raise Emulators.S5.Errors.RewriteBlockError, message: "Cannot rewrite block #{type} #{index} as their block sizes do not match."
     end
@@ -281,14 +284,14 @@ defmodule Emulators.S5.AP.State do
     state |> rewrite_block!(block)
   end
 
-  def write_block!(state, block, area \\ :USER) 
+  def write_block!(state, block, area \\ :USER)
   when area in [:USER, :DB]
   do
     # We try to find space available
     {address, left} = state |> iterate_blocks(
         :USER,
         fn _, _, next -> next.() end,
-        fn _, address, memory -> {address, memory} end 
+        fn _, address, memory -> {address, memory} end
     )
 
     data = Block.write(block)
@@ -308,12 +311,12 @@ defmodule Emulators.S5.AP.State do
     # System OBs
     cond do
         type == :OB and id >= 40 ->
-            # Trigger an interrupt at the emulator level 
+            # Trigger an interrupt at the emulator level
             # to process the special function.
             state |> EmulatorState.interrupt({:CALL, [:OB, id]})
         true ->
             _block = state |> take_block!(type, id)
-        
+
             _dba = block_address(state, type, id)
             _prev_sac = get(state, :SAC)
             _prev_dba = get(state, :DBA)
@@ -321,7 +324,7 @@ defmodule Emulators.S5.AP.State do
   end
 
   def block_return(_state)
-  do 
+  do
   end
 
   # Register-related functions
@@ -334,7 +337,7 @@ defmodule Emulators.S5.AP.State do
 
   def set(state, reg, value) do
     case reg do
-        :CC -> 
+        :CC ->
             registers = state |> registers |> Map.put(:CC, value)
             state |> set_registers(registers)
         :RLO ->
@@ -370,11 +373,11 @@ defmodule Emulators.S5.AP.State do
             [bit, address] = args
             abs = operand_to_address(state, operand, address)
             ((state |> read(abs)) >>> bit) &&& 1
-        
+
         # Byte access with 8-bits memory cases
         operand in [:IB, :QB, :FY, :SY] ->
             [address] = args
-            abs = operand_to_address(state, operand, address)            
+            abs = operand_to_address(state, operand, address)
             read(state, abs)
 
         # Word access with 8-bits memory cases
@@ -384,12 +387,12 @@ defmodule Emulators.S5.AP.State do
 
             low = read(state, abs) &&& 0xFF
             high = (read(state, abs + 1) &&& 0xFF) <<< 8
-      
+
             high + low
         # D-Word access with 8-bits memory cases
         operand in [:ID, :QD, :FD, :SD] ->
             [address] = args
-            
+
             abs = operand_to_address(state, operand, address)
 
             b0 = read(state, abs)
@@ -412,15 +415,15 @@ defmodule Emulators.S5.AP.State do
                 value = (value &&& 1) <<< bit
                 value = (read(state, abs) &&& (~~~(0b1 <<< bit))) + value
 
-                state 
+                state
                     |> write(abs, value)
-            
+
             operand in [:IB, :QB, :FY, :SY] ->
                 value = values
                 [address] = args
                 abs = operand_to_address(state, operand, address)
 
-                state 
+                state
                     |> write(abs, value)
 
             operand in [:IW, :QW, :FW, :SW] ->
@@ -432,7 +435,7 @@ defmodule Emulators.S5.AP.State do
                 high = (0xFF00 &&& value) >>> 8
                 low = 0x00FF &&& value
 
-                state 
+                state
                     |> write(abs, low)
                     |> write(abs + 1, high)
 
@@ -441,17 +444,17 @@ defmodule Emulators.S5.AP.State do
                 [w0, w1] = values
 
                 abs = operand_to_address(state, operand, address)
-        
+
                 b0 = w0 &&& 0xFF
                 b1 = (w0 &&& 0xFF00) >>> 8
                 b2 = w1 &&& 0xFF
                 b3 = (w0 &&& 0xFF00) >>> 8
-        
+
                 state
                     |> write(abs, b0)
                     |> write(abs, b1)
                     |> write(abs, b2)
-                    |> write(abs, b3)             
+                    |> write(abs, b3)
         end
   end
 end
