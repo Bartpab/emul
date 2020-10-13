@@ -132,7 +132,8 @@ defmodule Emulators.S5.GenAP do
 
       # Regular business
       GenState.mode(state) in [:RUN, :RESTART] ->
-        instr = state |> GenState.curr_instr()
+        state = state |> GenState.next_instr()
+        instr = state |> GenState.current_instr()
         state |> Dispatcher.dispatch(Genstate, instr)
     end
   end
