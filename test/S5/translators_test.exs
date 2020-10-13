@@ -5,11 +5,11 @@ defmodule EmulatorsTest.S5.Disassembler do
   doctest Emulators
 
   test "A C 0xAB" do
-    assert {2,:A, :C, [0xAB]} = Disassembler.translate([0xB8AB])
+    assert {2, :A, :C, [0xAB]} = Disassembler.translate([0xB8AB])
   end
 
   test "A D 0x0CBA" do
-    assert {2,:A, :D, [0x0C, 0xBA]} = Disassembler.translate([0x783F, 0x0CBA])
+    assert {2, :A, :D, [0x0C, 0xBA]} = Disassembler.translate([0x783F, 0x0CBA])
   end
 
   test "A F 0xCBA" do
@@ -174,94 +174,111 @@ defmodule EmulatorsTest.S5.Disassembler do
   end
 
   test "DOC FX 0xBA" do
-    assert {2, :DOC, :FX, [0xBA]} = Disassembler.translate([
-      0x7802, 0x09BA
-    ])
+    assert {2, :DOC, :FX, [0xBA]} =
+             Disassembler.translate([
+               0x7802,
+               0x09BA
+             ])
   end
 
   test "DOU FX 0xBA" do
-    assert {2, :DOU, :FX, [0xBA]} = Disassembler.translate([
-      0x7801, 0x01BA
-    ])
+    assert {2, :DOU, :FX, [0xBA]} =
+             Disassembler.translate([
+               0x7801,
+               0x01BA
+             ])
   end
 
   test "DUD" do
-    assert {1, :DUD, :no_operand, []} = Disassembler.translate([
-      0x680A
-    ])
+    assert {1, :DUD, :no_operand, []} =
+             Disassembler.translate([
+               0x680A
+             ])
   end
 
   test "DUF" do
-    assert {1, :DUF, :no_operand, []} = Disassembler.translate([
-      0x6808
-    ])
+    assert {1, :DUF, :no_operand, []} =
+             Disassembler.translate([
+               0x6808
+             ])
   end
 
   test "ENT" do
-    assert {1, :ENT, :no_operand, []} = Disassembler.translate([
-      0x06008
-    ])
+    assert {1, :ENT, :no_operand, []} =
+             Disassembler.translate([
+               0x06008
+             ])
   end
 
   test "FDG" do
-    assert {1, :FDG, :no_operand, []} = Disassembler.translate([
-      0x6806
-    ])
+    assert {1, :FDG, :no_operand, []} =
+             Disassembler.translate([
+               0x6806
+             ])
   end
 
   test "FR C 0xBA" do
-    assert {1, :FR, :C, [0xBA]} = Disassembler.translate([
-      0x44BA
-    ])
+    assert {1, :FR, :C, [0xBA]} =
+             Disassembler.translate([
+               0x44BA
+             ])
   end
 
   test "FR T 0xBA" do
-    assert {1, :FR, :T, [0xBA]} = Disassembler.translate([
-      0x04BA
-    ])
+    assert {1, :FR, :T, [0xBA]} =
+             Disassembler.translate([
+               0x04BA
+             ])
   end
 
   test "FR= 0xBA" do
-    assert {1, :FR_assign, :formal_operand, [0xBA]} = Disassembler.translate([
-      0x06BA
-    ])
+    assert {1, :FR_assign, :formal_operand, [0xBA]} =
+             Disassembler.translate([
+               0x06BA
+             ])
   end
 
   test "G DB 0xBA" do
-    assert {2, :G, :DB, [0xBA]} = Disassembler.translate([
-      0x7805,
-      0x00BA
-    ])
+    assert {2, :G, :DB, [0xBA]} =
+             Disassembler.translate([
+               0x7805,
+               0x00BA
+             ])
   end
 
   test "GFD" do
-    assert {1, :GFD, :no_operand, []} = Disassembler.translate([
-      0x6802
-    ])
+    assert {1, :GFD, :no_operand, []} =
+             Disassembler.translate([
+               0x6802
+             ])
   end
 
   test "GX DX 0xBA" do
-    assert {2, :GX, :DX, [0xBA]} = Disassembler.translate([
-      0x7804,
-      0x00BA
-    ])
+    assert {2, :GX, :DX, [0xBA]} =
+             Disassembler.translate([
+               0x7804,
+               0x00BA
+             ])
   end
 
   test "I 0xBA" do
-    assert {1, :I, :constant, [0xBA]} = Disassembler.translate([
-      0x11BA
-    ])
+    assert {1, :I, :constant, [0xBA]} =
+             Disassembler.translate([
+               0x11BA
+             ])
   end
 
   test "IA" do
-    assert {1, :IA, :no_operand, []} = Disassembler.translate([
-      0x0800
-    ])
+    assert {1, :IA, :no_operand, []} =
+             Disassembler.translate([
+               0x0800
+             ])
   end
 
   test "IAE" do
-    assert {1, :IAE, :no_operand, []} = Disassembler.translate([
-      0x7800
-    ])
+    assert {1, :IAE, :no_operand, []} =
+             Disassembler.translate([
+               0x7800
+             ])
   end
 end

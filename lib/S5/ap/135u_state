@@ -1,124 +1,71 @@
 
-defmodule Emulators.S5.AP.State do
+defmodule Emulators.S5.P135U.State do
   use Bitwise
+  use Emulators.S5.AP.CommonState
 
   alias Emulators.S5.Block
   alias Emulators.State, as: ES
 
-  def new() do
-      sizes = %{
-          USER: 0xFA00,
-          DB: 0x5D7F,
-          DB0: 0x67F,
-          S_FLAGS: 0x3FF,
-          RI: 0xFF,
-          RJ: 0xFF,
-          RS: 0xFF,
-          RT: 0xFF,
-          COUNTERS: 0xFF,
-          TIMERS: 0xFF,
-          FLAGS: 0xFF,
-          PII: 0x80,
-          PIQ: 0x80
+  def area_sizes() do
+    %{
+        USER: 0xFA00,
+        DB: 0x5D7F,
+        DB0: 0x67F,
+        S_FLAGS: 0x3FF,
+        RI: 0xFF,
+        RJ: 0xFF,
+        RS: 0xFF,
+        RT: 0xFF,
+        COUNTERS: 0xFF,
+        TIMERS: 0xFF,
+        FLAGS: 0xFF,
+        PII: 0x80,
+        PIQ: 0x80
+    }
+  end
+
+  def area_ptrs() do
+    %{
+        USER:      0x0000,
+        DB:        0x8000,
+        DB0:       0xDD80,
+        S_FLAGS:   0xE400,
+        RI:        0xEA00,
+        RS:        0xE800,
+        COUNTERS:  0xEC00,
+        TIMERS:    0xED00,
+        FLAGS:     0xEE00,
+        PII:       0xEF00,
+        PIQ:       0xEF80,
+    }
+  end
+
+  def data_block_table(db0_ptr) do
+    %{}
+      |> Map.put(:DX, db0_ptr)
+      |> Map.put(:FX, db0_ptr + 0x100)
+      |> Map.put(:DB, db0_ptr + 0x100 * 2)
+      |> Map.put(:SB, db0_ptr + 0x100 * 3)
+      |> Map.put(:PB, db0_ptr + 0x100 * 4)
+      |> Map.put(:FB, db0_ptr + 0x100 * 5)
+      |> Map.put(:OB, db0_ptr + 0x100 * 6)
+  end
+
+  def init(state) do
+      sizes = area_sizes()
+      ptrs = area_ptrs()
+      ptrs = ptrs |> Map.put(:BLOCK_TABLE, data_block_table(ptrs[:DB0]))
+
+      specs = %{
+          sizes: sizes,
+          ptrs: ptrs
       }
 
-      ptrs = %{
-          USER:      0x0000,
-          DB:        0x8000,
-          DB0:       0xDD80,
-          S_FLAGS:   0xE400,
-          RI:        0xEA00,
-          RS:        0xE800,
-          COUNTERS:  0xEC00,
-          TIMERS:    0xED00,
-          FLAGS:     0xEE00,
-          PII:       0xEF00,
-          PIQ:       0xEF80,
-      }
-
-      # Set Data Blocks Table Ptr
-      tables = %{}
-
-      tables = tables
-        |> Map.put(:DX, ptrs[:DB0])
-        |> Map.put(:FX, ptrs[:DB0] + 0x100)
-        |> Map.put(:DB, ptrs[:DB0] + 0x100 * 2)
-        |> Map.put(:SB, ptrs[:DB0] + 0x100 * 3)
-        |> Map.put(:PB, ptrs[:DB0] + 0x100 * 4)
-        |> Map.put(:FB, ptrs[:DB0] + 0x100 * 5)
-        |> Map.put(:OB, ptrs[:DB0] + 0x100 * 6)
-
-      ptrs = ptrs |> Map.put(:BLOCK_TABLE, tables)
-
-      ap = %{
-          mode: nil,
-          prev_mode: nil,
-          changed_mode: false,
-
-          memory: List.duplicate(0, 0xFFFF),
-
-          registers: %{
-              ACCU_1_H: 0x0000,
-              ACCU_1_L: 0x0000,
-              ACCU_2_H: 0x0000,
-              ACCU_2_L: 0x0000,
-              BSP: 0x0000,
-              DBA: 0x0000,
-              DBL: 0x0000,
-              SAC: 0x0000,
-              ACCU_3_H: 0x0000,
-              ACCU_3_L: 0x0000,
-              ACCU_4_H: 0x0000,
-              ACCU_5_L: 0x0000,
-              CC: 0x0000
-          },
-
-          specs: %{
-              ptr: ptrs,
-              size: sizes,
-              regmap: %{
-                  0 => :ACCU_1_H,
-                  1 => :ACCU_1_L,
-                  2 => :ACCU_2_H,
-                  3 => :ACCU_2_L,
-                  5 => :BSA,
-                  6 => :DBA,
-                  8 => :DBL,
-                  9 => :ACCU_3_H,
-                  10 => :ACCU_3_L,
-                  11 => :ACCU_4_H,
-                  12 => :ACCU_4_L
-              }
-          }
-      }
-
-      %{ap: ap}
-        |> Map.merge(ES.new())
+      memory: List.duplicate(0, 0xFFFF)
+      state |> Map.merge(%{ap: %{memory: memory, specs: specs}})     
   end
 
   # Base functions
-  def mode(state) do
-    get_in(state, [:ap, :mode])
-  end
-
-  def set_mode(state, value) do
-    put_in(state, [:ap, :prev_mode], mode(state))
-    put_in(state, [:ap, :mode], value)
-    put_in(state, [:ap, :changed_mode], true)
-  end
-
-  def mode_transition(state) do
-    {get_in(state, [:ap, :mode]), get_in(state, [:ap, :prev_mode])}
-  end
-
-  def has_mode_changed(state) do
-    get_in(state, [:ap, :changed_mode])
-  end
-
-  def ack_mode(state) do
-    put_in(state, [:ap, :changed_mode], false)
-  end
-
   def ptr(state, area) do
     get_in(state, [:ap, :specs, :ptr, area])
   end
@@ -325,25 +272,6 @@ defmodule Emulators.S5.AP.State do
 
   def block_return(_state)
   do
-  end
-
-  # Register-related functions
-  def get(state, reg) do
-    case reg do
-        :CC -> state |> registers |> Map.fetch!(:CC)
-        :RLO -> ((state |> get(:CC)) &&& 2) >>> 1
-    end
-  end
-
-  def set(state, reg, value) do
-    case reg do
-        :CC ->
-            registers = state |> registers |> Map.put(:CC, value)
-            state |> set_registers(registers)
-        :RLO ->
-            cc = (get(state, :CC) &&& (~~~2)) + ((value &&& 2) <<< 1)
-            state |> set(:CC, cc)
-    end
   end
 
   # Operand-related functions
