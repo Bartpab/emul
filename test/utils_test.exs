@@ -1,4 +1,4 @@
-defmodule EmulatorsTest do
+defmodule EmulatorsTest.Utils do
   use ExUnit.Case
 
   test "adjust" do

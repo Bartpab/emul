@@ -62,12 +62,18 @@ defmodule Emulators.S5.AP.CommonState do
       def set(state, reg, value) do
         case reg do
           :RLO ->
-            cc = (get(state, :CC) &&& ~~~2) + ((value &&& 2) <<< 1)
-            state |> set(:CC, cc)
+            cc = (get(state, :CC) &&& ~~~0b10) + ((value &&& 1) <<< 1)
+            
+            state 
+            |> set(:CC, cc)
 
           reg ->
-            registers = state |> registers |> Map.put(reg, value)
-            state |> set_registers(registers)
+            registers = state 
+            |> registers 
+            |> Map.put(reg, value)
+            
+            state 
+            |> set_registers(registers)
         end
       end
 

@@ -29,8 +29,9 @@ defmodule Emulators.S5.AP.GenState do
         DISTRIBUTED_IO: List.duplicate(0, 0x300)
       })
 
-    state |> put_in([:ap], ap)
-    state |> put_in([:emulator, :stack], [])
+    state 
+    |> put_in([:ap], ap)
+    |> put_in([:emulator, :stack], [])
   end
 
   # Instructions related
@@ -119,14 +120,12 @@ defmodule Emulators.S5.AP.GenState do
   end
 
   # Memory get/set
-  def take_area(state, area) do
-    case area do
-      :D ->
-        {type, id} = state |> get(:DBA)
-        state |> get_in([:ap, :blocks, type, id])
-
-      other ->
-        state |> get_in([:ap, other])
+  def take_area!(state, area) do
+    unless area == :D do
+      state[:ap][area]
+    else
+      {type, id} = state |> get(:DBA)
+      state |> get_in([:ap, :blocks, type, id])
     end
   end
 
@@ -160,19 +159,19 @@ defmodule Emulators.S5.AP.GenState do
     end
   end
 
-  def cell_size(area) do
+  def get_cell_size(area) do
     case area do
       :PIQ -> 8
       :PII -> 8
       :P -> 8
       :O -> 8
-      :FLAGS -> 8
-      :SFLAGS -> 8
+      :F -> 8
+      :S -> 8
       :D -> 16
     end
   end
 
-  def data_size(operand) do
+  def get_data_size(operand) do
     cond do
       operand in [:Q, :I, :F, :S] -> 1
       operand in [:QB, :IB, :PY, :OY, :FY, :SY, :DR, :DL] -> 8
@@ -182,48 +181,85 @@ defmodule Emulators.S5.AP.GenState do
   end
 
   def get(state, operand, args) do
-    data_size = data_size(operand)
-    cell_size = cell_size(operand)
+    data_size = get_data_size(operand)
     area_type = op2area(operand)
+    cell_size = get_cell_size(area_type)
 
     cond do
       data_size == 1 ->
         [bit, addr] = args
 
         state
-        |> take_area(area_type)
-        |> Enum.fetch(addr)
+        |> take_area!(area_type)
+        |> Enum.fetch!(addr)
         |> band(bsl(1, bit))
         |> bsr(bit)
 
       data_size > cell_size ->
         [addr] = args
-        nb = data_size / cell_size
+        nb = (data_size / cell_size) |> trunc
 
         state
-        |> take_area(area_type)
+        |> take_area!(area_type)
         |> Enum.slice(addr, nb)
         |> Emulators.Utils.adjust(cell_size, data_size)
+        |> Enum.fetch!(0)
 
-      data_size <= cell_size ->
+      data_size == cell_size ->
         [addr] = args
 
         state
-        |> take_area(area_type)
-        |> Enum.splice(addr, 1)
+        |> take_area!(area_type)
+        |> Enum.slice(addr, 1)
         |> Emulators.Utils.adjust(cell_size, data_size)
         |> Enum.fetch!(0)
+
+      data_size < cell_size ->
+        [addr] = args
+
+        value =
+          state
+          |> take_area!(area_type)
+          |> Enum.slice(addr, 1)
+          |> Emulators.Utils.adjust(cell_size, data_size)
+          |> Enum.fetch!(0)
+
+        shift = op2shift(operand)
+        value = value >>> shift
+        flag = Emulators.Utils.expand_flag(data_size)
+        value &&& flag
     end
   end
 
-  def set(state, operand, args, values) do
-    data_size = data_size(operand)
-    cell_size = cell_size(operand)
+  def set(state, operand, args, value) when is_list(value) == false do
+    state |> set(operand, args, [value])
+  end
+
+  def set(state, operand, args, values) when is_list(values) do
+    data_size = get_data_size(operand)
     area_type = op2area(operand)
+    cell_size = get_cell_size(area_type)
 
     cond do
       data_size == 1 ->
-        nil
+        [bit, addr] = args
+
+        flag = ~~~(1 <<< bit)
+
+        value =
+          state
+          |> take_area!(area_type)
+          |> Enum.fetch!(addr)
+
+        value = (value &&& flag) + (values |> Enum.fetch!(0) <<< bit)
+
+        area =
+          state
+          |> take_area!(area_type)
+          |> List.replace_at(addr, value)
+
+        state
+        |> write_area(area_type, area)
 
       data_size == cell_size ->
         [addr] = args
@@ -235,8 +271,8 @@ defmodule Emulators.S5.AP.GenState do
 
         area =
           state
-          |> take_area(area_type)
-          |> Enum.replace_at(addr, value)
+          |> take_area!(area_type)
+          |> List.replace_at(addr, value)
 
         state
         |> write_area(area_type, area)
@@ -247,11 +283,11 @@ defmodule Emulators.S5.AP.GenState do
 
         area =
           state
-          |> take_area(area_type)
+          |> take_area!(area_type)
+          |> Emulators.Utils.write(addr, values)
 
-        for {i, value} <- Enum.each(values) |> Enum.with_index() do
-          area = area |> Enum.replace_at(addr + i, value)
-        end
+        state
+        |> write_area(area_type, area)
 
       data_size < cell_size ->
         [addr] = args
@@ -267,17 +303,18 @@ defmodule Emulators.S5.AP.GenState do
 
         current_value =
           state
-          |> take_area(area_type)
-          |> Enum.fetch(addr)
+          |> take_area!(area_type)
+          |> Enum.fetch!(addr)
 
         value = (current_value &&& flag) + value
 
         area =
           state
-          |> take_area(area_type)
-          |> Enum.replace_at(addr, value)
+          |> take_area!(area_type)
+          |> List.replace_at(addr, value)
 
-        state |> write_area(area_type, area)
+        state
+        |> write_area(area_type, area)
     end
   end
 end

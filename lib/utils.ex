@@ -81,4 +81,16 @@ defmodule Emulators.Utils do
       ratio < 1 -> data |> expand_values(src_size, dest_size)
     end
   end
+
+  def write(dest, base, values, offset \\ 0) do
+    case values do
+      [head | tail] ->
+        dest
+        |> List.replace_at(base + offset, head)
+        |> write(base, tail, offset + 1)
+
+      [] ->
+        dest
+    end
+  end
 end
