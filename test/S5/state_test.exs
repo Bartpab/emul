@@ -2,8 +2,7 @@ defmodule EmulatorsTest.S5.State do
   use ExUnit.Case
   use Bitwise
 
-  alias Emulators.S5.AP.State
-  doctest Emulators
+  alias Emulators.S5.AP.GenState, as: State
 
   test "new" do
     assert state = State.new()

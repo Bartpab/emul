@@ -198,7 +198,7 @@ defmodule Emulators.S5.AP.GenState do
 
       data_size > cell_size ->
         [addr] = args
-        nb = data_size / cell_type
+        nb = data_size / cell_size
 
         state
         |> take_area(area_type)
@@ -206,6 +206,8 @@ defmodule Emulators.S5.AP.GenState do
         |> Emulators.Utils.adjust(cell_size, data_size)
 
       data_size <= cell_size ->
+        [addr] = args
+
         state
         |> take_area(area_type)
         |> Enum.splice(addr, 1)

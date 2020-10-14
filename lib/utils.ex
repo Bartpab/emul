@@ -1,8 +1,18 @@
 defmodule Emulators.Utils do
-  def compress_chunk(chunk, offset, src_size, dest_size) do
+  use Bitwise
+
+  def compress_chunk(chunk, index, src_size, dest_size, endianess \\ :little_end) do
+    max = ((dest_size / src_size) |> trunc) - 1
+
+    shift =
+      case endianess do
+        :little_end -> (max - index) * src_size
+        :big_end -> index * src_size
+      end
+
     case chunk do
       [head | tail] ->
-        head <<< (offset * src_size + compress_chunk(tail, offset + 1, src_size, dest_size))
+        (head <<< shift) + compress_chunk(tail, index + 1, src_size, dest_size)
 
       [] ->
         0
@@ -12,8 +22,8 @@ defmodule Emulators.Utils do
   def compress_chunks(chunks, src_size, dest_size) do
     case chunks do
       [chunk | tail] ->
-        [compress_chunk(chunk, 0, src_size, dest_size)]
-        +compress_chunks(tail, src_size, dest_size)
+        [compress_chunk(chunk, 0, src_size, dest_size)] ++
+          compress_chunks(tail, src_size, dest_size)
 
       [] ->
         []
@@ -28,25 +38,26 @@ defmodule Emulators.Utils do
     end
   end
 
-  def expand_value(value, offset, src_size, dest_size) do
-    max = src_size / dest_size
+  def expand_value(value, index, src_size, dest_size) do
+    max = ((src_size / dest_size) |> trunc) - 1
 
-    shift = offset * dest_size
-    flag = expand_flag(dest_size)
-    flag <<< shift
-    value = (value &&& flag) >>> shift
+    shift = (max - index) * dest_size
+    flag = expand_flag(dest_size - 1)
+    flag = flag <<< shift
+    part = (value &&& flag) >>> shift
 
-    if offset < max do
-      [value] ++ expand_value(value, offset + 1, src_size, dest_size)
+    if index < max do
+      [part] ++ expand_value(value, index + 1, src_size, dest_size)
     else
-      [value]
+      [part]
     end
   end
 
   def expand_values(values, src_size, dest_size) do
     case values do
       [value | tail] ->
-        expand_value(value, 0, src_size, dest_size) ++ expand_values(tail, src_size, dest_size)
+        expand_value(value, 0, src_size, dest_size) ++
+          expand_values(tail, src_size, dest_size)
 
       [] ->
         []
@@ -57,7 +68,7 @@ defmodule Emulators.Utils do
     chunk_size = dest_size / src_size
 
     values
-    |> Enum.chunk_every(chunk_size)
+    |> Enum.chunk_every(chunk_size |> trunc)
     |> compress_chunks(src_size, dest_size)
   end
 
