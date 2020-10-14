@@ -18,6 +18,9 @@ defmodule Emulators.S5.AP.CommonState do
                 11 => :ACCU_4_H,
                 12 => :ACCU_4_L
               },
+              edges: %{
+                RLO: :stay
+              },
               ACCU_1_H: 0x0000,
               ACCU_1_L: 0x0000,
               ACCU_2_H: 0x0000,
@@ -54,18 +57,50 @@ defmodule Emulators.S5.AP.CommonState do
 
       def get(state, reg) do
         case reg do
-          :RLO -> (state |> get(:CC) &&& 2) >>> 1
-          reg -> state |> registers |> Map.fetch!(reg)
+          :ACCU_1 ->
+            [state |> get(:ACCU_1_L), state |> get(:ACCU_1_H)]
+            |> Emulators.Utils.adjust([value], 16, 32)
+            |> Enum.fetch!(0)
+
+          :RLO ->
+            (state |> get(:CC) &&& 2) >>> 1
+
+          reg ->
+            state |> registers |> Map.fetch!(reg)
         end
+      end
+
+      def set_edge(state, edge, value) do
+        edge =
+          case value do
+            -1 -> :negative
+            1 -> :positive
+            0 -> :stay
+          end
+
+        put_in(state, [:registers, :edges, edge], edge)
+      end
+
+      def get_edge(state, edge) do
+        get_in(state, [:registers, :edges, edge])
       end
 
       def set(state, reg, value) do
         case reg do
+          :ACCU_1 ->
+            [low, high] = Emulators.Utils.adjust([value], 32, 16)
+
+            state
+            |> set(:ACCU_1_L, low)
+            |> set(:ACCU_1_H, high)
+
           :RLO ->
             cc = (get(state, :CC) &&& ~~~0b10) + ((value &&& 1) <<< 1)
+            old_rlo = state |> get(:RLO)
 
             state
             |> set(:CC, cc)
+            |> set_edge(:RLO, rlo - old_rlo)
 
           reg ->
             registers =

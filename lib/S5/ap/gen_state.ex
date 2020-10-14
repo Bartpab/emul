@@ -15,12 +15,15 @@ defmodule Emulators.S5.AP.GenState do
           PB: %{},
           DB: %{}
         },
+        ACTIVATED_TIMERS: MapSet.new(),
         PIQ: List.duplicate(0, 0xFF),
         PII: List.duplicate(0, 0xFF),
         F: List.duplicate(0, 0xFF),
         S: List.duplicate(0, 0xFF),
         P: List.duplicate(0, 0xFF),
         O: List.duplicate(0, 0xFF),
+        C: List.duplicate(0, 0xFF),
+        T: List.duplicate(0, 0xFF),
         IM3: List.duplicate(0, 0xFF),
         IM4: List.duplicate(0, 0xFF),
         IPC: List.duplicate(0, 0xFF),
@@ -144,6 +147,8 @@ defmodule Emulators.S5.AP.GenState do
     cond do
       operand in [:Q, :QB, :QW, :QD] -> :PIQ
       operand in [:I, :IB, :IW, :ID] -> :PII
+      operand in [:C] -> :C
+      operand in [:T] -> :T
       operand in [:PY, :PW] -> :P
       operand in [:OY, :OW] -> :O
       operand in [:F, :FY, :FW, :FD] -> :F
@@ -168,6 +173,8 @@ defmodule Emulators.S5.AP.GenState do
       :F -> 8
       :S -> 8
       :D -> 16
+      :C -> 16
+      :T -> 16
     end
   end
 
@@ -175,12 +182,33 @@ defmodule Emulators.S5.AP.GenState do
     cond do
       operand in [:Q, :I, :F, :S] -> 1
       operand in [:QB, :IB, :PY, :OY, :FY, :SY, :DR, :DL] -> 8
-      operand in [:QW, :IW, :PW, :OW, :FW, :SW, :DW] -> 16
+      operand in [:QW, :IW, :PW, :OW, :FW, :SW, :DW, :C, :T] -> 16
       operand in [:QD, :ID, :FD, :SD, :DD] -> 32
     end
   end
 
-  def get(state, operand, args) do
+  def is_constant(operand) do
+    operand in [
+      :DH,
+      :KB,
+      :KC,
+      :KF,
+      :KG,
+      :KH,
+      :KM,
+      :KS,
+      :KT,
+      :KY
+    ]
+  end
+
+  def get(state, operand, args)
+      when is_constant(operand) do
+    args
+  end
+
+  def get(state, operand, args)
+      when is_constant(operand) == false do
     data_size = get_data_size(operand)
     area_type = op2area(operand)
     cell_size = get_cell_size(area_type)

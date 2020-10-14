@@ -28,25 +28,38 @@ defmodule Emulators.S5.GenAP do
     end
   end
 
+  def begin_cycle(state) do
+    state = Device.set_mode(:RUN)
+
+    if GenState.has_block(state, :OB, 20) do
+      state |> GenState.call(:OB, 20)
+    else
+      state |> GenState.call(:FB, 0)
+    end
+  end
+
+  def end_cycle(state) do
+    # Ack edge change
+    state |> GenState.set_edge(:RLO, :stay)
+    state |> begin_cycle
+  end
+
+  def begin_restart(state) do
+  end
+
+  def end_restart(state) do
+    state |> begin_cycle()
+  end
+
   def process_internals(state) do
     state
     |> ES.poll(fn state, msg ->
       case msg do
         {:BLOCK_RETURN, {:OB, 1}} ->
-          state |> GenState.set_mode(:RUN)
+          state |> end_cycle()
 
         {:BLOCK_RETURN, {:FB, 0}} ->
-          state
-          |> GenState.call(:FB, 0)
-          |> GenState.set_mode(:RUN)
-
-        {:BLOCK_RETURN, {:FB, 1}} ->
-          state
-          |> ES.interrupt({:FB, 1})
-          |> GenState.call(:FB, 1)
-
-        {:BLOCK_RETURN, {:OB, 20}} ->
-          state |> GenState.call(:OB, 20)
+          state |> end_cycle()
 
         _ ->
           state
@@ -57,29 +70,27 @@ defmodule Emulators.S5.GenAP do
   def process_transition(state, transition) do
     case transition do
       {:POWER_OFF, _} ->
-        state |> Device.set_mode(:IDLE)
+        state
+        |> Device.set_mode(:IDLE)
 
       {:POWER_ON, _} ->
-        state |> GenState.set_mode(:STOP)
+        state
+        |> GenState.set_mode(:STOP)
 
       {:STOP, _} ->
-        state |> Device.set_mode(:IDLE)
+        state
+        |> Device.set_mode(:IDLE)
 
       {:RESTART, _} ->
-        state = state |> Device.set_mode(:RUN)
-
-        if GenState.has_block(state, :OB, 1) do
-          state |> GenState.call(:OB, 1)
-        else
-          state |> GenState.call(:FB, 0)
-        end
+        state =
+          state
+          |> Device.set_mode(:RUN)
+          |> begin_restart()
 
       {:RUN, _} ->
-        if GenState.has_block(state, :OB, 20) do
-          state |> GenState.call(:OB, 20)
-        else
-          state |> GenState.call(:FB, 1)
-        end
+        state
+        |> Device.set_mode(:RUN)
+        |> begin_cycle()
 
       _ ->
         state
@@ -90,13 +101,16 @@ defmodule Emulators.S5.GenAP do
     state =
       case msg do
         :POWER_ON ->
-          state |> GenState.set_mode(:POWER_ON)
+          state
+          |> GenState.set_mode(:POWER_ON)
 
         :POWER_OFF ->
-          state |> GenState.set_mode(:POWER_OFF)
+          state
+          |> GenState.set_mode(:POWER_OFF)
 
         :START ->
-          state |> GenState.set_mode(:RESTART)
+          state
+          |> GenState.set_mode(:RESTART)
 
         :DISPLAY_STATE ->
           IO.inspect(state)

@@ -1,6 +1,13 @@
 defmodule Emulators.S5.Dispatcher do
   use Bitwise
 
+  def reverse(value, size, chunk \\ 8) do
+    Emulators.Utils.adjust([value], size, chunk)
+    |> List.reverse()
+    |> Emulators.Utils.adjust(chunk, size)
+    |> Enum.fetch!(0)
+  end
+
   # A
   def dispatch(state, mutator, {:A, operand, args})
       when operand in [:I, :Q, :F, :S, :D, :T, :C] do
@@ -56,34 +63,87 @@ defmodule Emulators.S5.Dispatcher do
   # =
   def dispatch(state, mutator, {:assign, operand, args})
       when operand in [:I, :Q, :F, :S, :D] do
-        mutator.set(state, operand, args, state |> state.get(:RLO))
+    state |> mutator.set(operand, args, state |> mutator.get(:RLO))
   end
 
   # L
-  # L IB/QB/FY/SY
-  def dispatch(state, mutator, {:L, operand, args})
-      when operand in [:IB, :QB, :FY, :SY, :PY, :OY] do
-    byte = mutator.get(state, operand, args)
+  def dispatch(state, mutator, {:L, operand, args}) do
+    value = state |> mutator.get(operand, args)
 
-    state
-    |> mutator.set(:ACCU_1_L, byte)
+    case operand do
+      :IB -> state |> mutator.set(:ACCU_1_L, value)
+      :IW -> state |> mutator.set(:ACCU_1_L, reverse(value, 16))
+      :ID -> state |> mutator.set(:ACCU_1, reverse(value, 32))
+      :QB -> state |> mutator.set(:ACCU_1_L, value)
+      :QW -> state |> mutator.set(:ACCU_1_L, reverse(value, 16))
+      :QD -> state |> mutator.set(:ACCU_1, reverse(value, 32))
+      :FY -> state |> mutator.set(:ACCU_1_L, value)
+      :FW -> state |> mutator.set(:ACCU_1_L, reverse(value, 16))
+      :FD -> state |> mutator.set(:ACCU_1, reverse(value, 32))
+      :SY -> state |> mutator.set(:ACCU_1_L, value)
+      :SW -> state |> mutator.set(:ACCU_1_L, reverse(value, 16))
+      :SD -> state |> mutator.set(:ACCU_1, reverse(value, 32))
+      :DH -> state |> mutator.set(:ACCU_1, value)
+      :DL -> state |> mutator.set(:ACCU_1_L, value)
+      :DR -> state |> mutator.set(:ACCU_1_L, value)
+      :DW -> state |> mutator.set(:ACCU_1_L, value)
+      :DD -> state |> mutator.set(:ACCU_1, reverse(value, 32, 16))
+      :KB -> state |> mutator.set(:ACCU_1_L, value)
+      :KC -> state |> mutator.set(:ACCU_1_L, value)
+      :KF -> state |> mutator.set(:ACCU_1_L, value)
+      :KG -> state |> mutator.set(:ACCU_1_L, value)
+      :KH -> state |> mutator.set(:ACCU_1_L, value)
+      :KM -> state |> mutator.set(:ACCU_1_L, value)
+      :KS -> state |> mutator.set(:ACCU_1_L, value)
+      :KT -> state |> mutator.set(:ACCU_1_L, value)
+      :KY -> state |> mutator.set(:ACCU_1_L, value)
+      :PY -> state |> mutator.set(:ACCU_1_L, value)
+      :PW -> state |> mutator.set(:ACCU_1_L, reverse(value, 16))
+      :OY -> state |> mutator.set(:ACCU_1_L, value)
+      :OW -> state |> mutator.set(:ACCU_1_L, reverse(value, 16))
+      :T -> state |> mutator.set(:ACCU_1_L, value)
+      :C -> state |> mutator.set(:ACCU_1_L, value)
+    end
   end
 
-  # L T/C
-  def dispatch(state, mutator, {:L, operand, args})
-      when operand in [:C, :T] do
-    word = mutator.get(state, operand, args)
-    state |> mutator.set(:ACCU_1_L, word)
+  # LC
+  def dispatch(state, mutator, {:LC, operand, args}) do
+    value = state |> mutator.get(operand, args)
+
+    case operand do
+      :T -> state |> mutator.set(:ACCU_1_L, value)
+      :C -> state |> mutator.set(:ACCU_1_L, value)
+    end
   end
 
-  # L IW/QW/FW/SW/PW/OW
-  def dispatch(state, mutator, {:L, operand, args})
-      when operand in [:IW, :QW, :FW, :SW, :PW, :OW] do
-    word = mutator.get(state, operand, args)
+  # T
+  def dispatch(state, mutator, {:T, operand, args}) do
+    case operand do
+      :IB -> state |> mutator.set(operand, args, state |> mutator.get(:ACCU_1_L))
+      :IW -> state |> mutator.set(operand, args, reverse(state |> mutator.get(:ACCU_1_L), 16))
+      :ID -> state |> mutator.set(operand, args, reverse(state |> mutator.get(:ACCU_1), 32))
+      :QB -> state |> mutator.set(operand, args, state |> mutator.get(:ACCU_1_L))
+      :QW -> state |> mutator.set(operand, args, reverse(state |> mutator.get(:ACCU_1_L), 16))
+      :QD -> state |> mutator.set(operand, args, reverse(state |> mutator.get(:ACCU_1), 32))
+      :FY -> state |> mutator.set(operand, args, state |> mutator.get(:ACCU_1_L))
+      :FW -> state |> mutator.set(operand, args, reverse(state |> mutator.get(:ACCU_1_L), 16))
+      :FD -> state |> mutator.set(operand, args, reverse(state |> mutator.get(:ACCU_1), 32))
+      :SY -> state |> mutator.set(operand, args, state |> mutator.get(:ACCU_1_L))
+      :SW -> state |> mutator.set(operand, args, reverse(state |> mutator.get(:ACCU_1_L), 16))
+      :SD -> state |> mutator.set(operand, args, reverse(state |> mutator.get(:ACCU_1), 32))
+      :DL -> state |> mutator.set(operand, args, state |> mutator.get(:ACCU_1_L))
+      :DR -> state |> mutator.set(operand, args, state |> mutator.get(:ACCU_1_L))
+      :DW -> state |> mutator.set(operand, args, state |> mutator.get(:ACCU_1))
+      :DD -> state |> mutator.set(operand, args, reverse(state |> mutator.get(:ACCU_1), 32, 16))
+      :PY -> state |> mutator.set(operand, args, state |> mutator.get(:ACCU_1_L))
+      :PW -> state |> mutator.set(operand, args, reverse(state |> mutator.get(:ACCU_1_L), 16))
+      :OY -> state |> mutator.set(operand, args, state |> mutator.get(:ACCU_1_L))
+      :OW -> state |> mutator.set(operand, args, reverse(state |> mutator.get(:ACCU_1_L), 16))
+    end
+  end
 
-    b0 = (word &&& 0xFF) <<< 8
-    b1 = (word &&& 0xFF) >>> 8
-
-    state |> mutator.set(:ACCU_1_L, b0 + b1)
+  # SP
+  def dispatch(state, mutator, {:SP, :T, args}) do
+    timer_id = args | Enum.fetch!(0)
   end
 end
