@@ -25,8 +25,8 @@ defmodule Emulators.S5.Dispatcher do
   # ON
   def dispatch(state, mutator, {:ON, operand, args})
       when operand in [:I, :Q, :F, :S, :D, :T, :C] do
-    result = mutator.get(state, :RLO) ||| ~~~mutator.get(state, operand, args)
-    state |> mutator.set(:RLO, result)
+    result = mutator.get(state, :RLO) ||| mutator.get(state, operand, args)
+    state |> mutator.set(:RLO, ~~~result)
   end
 
   # S
@@ -56,7 +56,7 @@ defmodule Emulators.S5.Dispatcher do
   # =
   def dispatch(state, mutator, {:assign, operand, args})
       when operand in [:I, :Q, :F, :S, :D] do
-    state.set(state, operand, args, state |> state.get(:RLO))
+        mutator.set(state, operand, args, state |> state.get(:RLO))
   end
 
   # L

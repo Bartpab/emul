@@ -29,7 +29,7 @@ defmodule Emulators.S5.AP.GenState do
         DISTRIBUTED_IO: List.duplicate(0, 0x300)
       })
 
-    state 
+    state
     |> put_in([:ap], ap)
     |> put_in([:emulator, :stack], [])
   end
