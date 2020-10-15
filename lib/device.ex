@@ -32,8 +32,6 @@ defmodule Emulators.Device do
       end
 
       def run({id, opts}) do
-        Emulators.Devices.bind(self(), id)
-
         start(opts)
         |> Map.merge(%{device: %{id: id, mode: :IDLE}})
         |> Map.merge(Emulators.COM.new())

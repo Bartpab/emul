@@ -18,9 +18,6 @@ defmodule Emulators.S5.AP.CommonState do
                 11 => :ACCU_4_H,
                 12 => :ACCU_4_L
               },
-              edges: %{
-                RLO: :stay
-              },
               ACCU_1_H: 0x0000,
               ACCU_1_L: 0x0000,
               ACCU_2_H: 0x0000,
@@ -35,15 +32,70 @@ defmodule Emulators.S5.AP.CommonState do
               ACCU_5_L: 0x0000,
               CC: 0x0000
             },
-            mode: %{
-              current: :default,
-              prev: :default,
-              changed: false
-            }
+            edges: %{
+              RLO: :stay
+            },
+            states: [:DEFAULT],
+            transitions: []
           }
         }
         |> Map.merge(Emulators.State.new())
         |> init()
+      end
+
+      def set_state(state, mode) do
+        old_mode = state |> current_state
+        states = get_state_stack(state)
+        states = states |> List.replace_at(0, mode)
+        
+        state
+        |> put_in([:ap, :states], states)
+        |> push_transition({mode, old_mode, :SWAPPED})
+      end
+
+      def push_transition(state, transition) do
+        transitions = get_in(state, [:ap, :transitions])
+        state
+        |> put_in([:ap, :transitions], transitions ++ [transition])
+      end
+
+      def get_transitions(state) do
+        get_in(state, [:ap, :transitions])
+      end
+
+      def clear_transitions(state) do
+        state
+        |> put_in([:ap, :transitions], [])
+      end
+
+      def push_state(state, mode) do
+        old_mode = state |> current_state
+        states = state |> get_state_stack
+        state
+        |> put_in([:ap, :states], [mode | states])
+        |> push_transition({mode, old_mode, :PUSHED})
+      end
+
+      def pop_state(state) do
+        old_mode = state |> current_state
+        [_ | tail] = state |> get_state_stack
+        state = state
+        |> put_in([:ap, :states], tail)
+        new_mode = state |> current_state
+        state 
+        |> push_transition({new_mode, old_mode, :POPPED})
+      end
+
+      def get_state_stack(state) do
+        get_in(state, [:ap, :states])
+      end
+
+      def in_state(state, mode) do
+        state |> get_state_stack |> Enum.member?(mode)
+      end
+
+      def current_state(state) do
+        state |> get_state_stack |> Enum.fetch!(0)
       end
 
       # Register-related functions
@@ -59,7 +111,7 @@ defmodule Emulators.S5.AP.CommonState do
         case reg do
           :ACCU_1 ->
             [state |> get(:ACCU_1_L), state |> get(:ACCU_1_H)]
-            |> Emulators.Utils.adjust([value], 16, 32)
+            |> Emulators.Utils.adjust(16, 32)
             |> Enum.fetch!(0)
 
           :RLO ->
@@ -71,18 +123,18 @@ defmodule Emulators.S5.AP.CommonState do
       end
 
       def set_edge(state, edge, value) do
-        edge =
+        edge_direction =
           case value do
             -1 -> :negative
             1 -> :positive
             0 -> :stay
           end
 
-        put_in(state, [:registers, :edges, edge], edge)
+        put_in(state, [:ap, :edges, edge], edge_direction)
       end
 
       def get_edge(state, edge) do
-        get_in(state, [:registers, :edges, edge])
+        get_in(state, [:ap, :edges, edge])
       end
 
       def set(state, reg, value) do
@@ -96,11 +148,9 @@ defmodule Emulators.S5.AP.CommonState do
 
           :RLO ->
             cc = (get(state, :CC) &&& ~~~0b10) + ((value &&& 1) <<< 1)
-            old_rlo = state |> get(:RLO)
 
             state
             |> set(:CC, cc)
-            |> set_edge(:RLO, rlo - old_rlo)
 
           reg ->
             registers =
@@ -111,32 +161,6 @@ defmodule Emulators.S5.AP.CommonState do
             state
             |> set_registers(registers)
         end
-      end
-
-      # Mode-related functions
-      def set_mode(state, mode) do
-        prev = get_in(state, [:ap, :mode, :current])
-
-        state
-        |> put_in([:ap, :mode, :prev], prev)
-        |> put_in([:ap, :mode, :current], mode)
-        |> put_in([:ap, :mode, :changed], true)
-      end
-
-      def mode(state) do
-        get_in(state, [:ap, :mode, :current])
-      end
-
-      def has_mode_changed(state) do
-        get_in(state, [:ap, :mode, :changed])
-      end
-
-      def ack_mode(state) do
-        state |> put_in([:ap, :mode, :changed], false)
-      end
-
-      def mode_transition(state) do
-        {get_in(state, [:ap, :mode, :current]), get_in(state, [:ap, :mode, :prev])}
       end
     end
   end

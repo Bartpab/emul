@@ -15,7 +15,6 @@ defmodule Emulators.S5.AP.GenState do
           PB: %{},
           DB: %{}
         },
-        ACTIVATED_TIMERS: MapSet.new(),
         PIQ: List.duplicate(0, 0xFF),
         PII: List.duplicate(0, 0xFF),
         F: List.duplicate(0, 0xFF),
@@ -89,23 +88,27 @@ defmodule Emulators.S5.AP.GenState do
       type == :OB and id >= 40 ->
         # Trigger an interrupt at the emulator level
         # to process the special function.
-        state |> ES.interrupt({:CALL, {:OB, id}})
+        state = state |> ES.interrupt({:CALL, {:OB, id}})
 
       type == :FB and id in [0, 1] ->
-        state |> ES.interrupt({:CALL, {:FB, id}})
+        state =
+          state
+          |> ES.interrupt({:CALL, {:FB, id}})
 
       true ->
         unless has_block(state, type, id) do
           raise "Block #{type} #{id} does not exist in memory."
         end
 
-        state
-        |> push_bstack({0x0000, get(state, :SAC), get(state, :DBA), get(state, :DBA)})
-        |> set(:SAC, {type, id, -1})
-        |> put_in(
-          [:emulator, :stack],
-          get_in(state, [:emulator, :stack]) ++ [{type, id}]
-        )
+        state =
+          state
+          |> push_bstack({0x0000, get(state, :SAC), get(state, :DBA), get(state, :DBA)})
+          |> set(:SAC, {type, id, -1})
+          |> put_in(
+            [:emulator, :stack],
+            get_in(state, [:emulator, :stack]) ++ [{type, id}]
+          )
+          |> ES.push({:BLOCK_CALL, {type, id, :internal}})
     end
   end
 
@@ -187,22 +190,21 @@ defmodule Emulators.S5.AP.GenState do
     end
   end
 
-  def is_constant(operand) do
-    operand in [
-      :DH,
-      :KB,
-      :KC,
-      :KF,
-      :KG,
-      :KH,
-      :KM,
-      :KS,
-      :KT,
-      :KY
-    ]
-  end
+  defguard is_constant(operand)
+           when operand in [
+                  :DH,
+                  :KB,
+                  :KC,
+                  :KF,
+                  :KG,
+                  :KH,
+                  :KM,
+                  :KS,
+                  :KT,
+                  :KY
+                ]
 
-  def get(state, operand, args)
+  def get(_, operand, args)
       when is_constant(operand) do
     args
   end

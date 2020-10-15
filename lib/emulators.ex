@@ -39,6 +39,7 @@ defmodule Emulators.Devices do
         {device, {device_id, opts}}
       )
 
+    Process.register(pid, device_id)
     {:ok, device_id}
   end
 
@@ -48,6 +49,10 @@ defmodule Emulators.Devices do
 
   def all() do
     GenServer.call(__MODULE__, {:get, :all})
+  end
+
+  def display_state(device) do
+    send(device, :DISPLAY_STATE)
   end
 
   def bind(pid, id) do
@@ -60,7 +65,7 @@ defmodule Emulators.Devices do
 
   @impl true
   def handle_cast({:bind, pid, id}, {counter, register, reverse}) do
-    Process.register(pid, id)
+    
 
     register =
       register

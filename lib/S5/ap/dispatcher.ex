@@ -3,7 +3,7 @@ defmodule Emulators.S5.Dispatcher do
 
   def reverse(value, size, chunk \\ 8) do
     Emulators.Utils.adjust([value], size, chunk)
-    |> List.reverse()
+    |> Enum.reverse()
     |> Emulators.Utils.adjust(chunk, size)
     |> Enum.fetch!(0)
   end
@@ -144,6 +144,10 @@ defmodule Emulators.S5.Dispatcher do
 
   # SP
   def dispatch(state, mutator, {:SP, :T, args}) do
-    timer_id = args | Enum.fetch!(0)
+    _timer_id = args |> Enum.fetch!(0)
+    _timer_value = state |> mutator.get(:ACCU_1_L)
+
+    if state |> mutator.get_edge(:RLO) == :raising do
+    end
   end
 end
