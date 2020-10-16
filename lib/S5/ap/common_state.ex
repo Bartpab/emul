@@ -40,62 +40,8 @@ defmodule Emulators.S5.AP.CommonState do
           }
         }
         |> Map.merge(Emulators.State.new())
+        |> Emulators.PushdownAutomaton.new([:ap, :mode])
         |> init()
-      end
-
-      def set_state(state, mode) do
-        old_mode = state |> current_state
-        states = get_state_stack(state)
-        states = states |> List.replace_at(0, mode)
-        
-        state
-        |> put_in([:ap, :states], states)
-        |> push_transition({mode, old_mode, :SWAPPED})
-      end
-
-      def push_transition(state, transition) do
-        transitions = get_in(state, [:ap, :transitions])
-        state
-        |> put_in([:ap, :transitions], transitions ++ [transition])
-      end
-
-      def get_transitions(state) do
-        get_in(state, [:ap, :transitions])
-      end
-
-      def clear_transitions(state) do
-        state
-        |> put_in([:ap, :transitions], [])
-      end
-
-      def push_state(state, mode) do
-        old_mode = state |> current_state
-        states = state |> get_state_stack
-        state
-        |> put_in([:ap, :states], [mode | states])
-        |> push_transition({mode, old_mode, :PUSHED})
-      end
-
-      def pop_state(state) do
-        old_mode = state |> current_state
-        [_ | tail] = state |> get_state_stack
-        state = state
-        |> put_in([:ap, :states], tail)
-        new_mode = state |> current_state
-        state 
-        |> push_transition({new_mode, old_mode, :POPPED})
-      end
-
-      def get_state_stack(state) do
-        get_in(state, [:ap, :states])
-      end
-
-      def in_state(state, mode) do
-        state |> get_state_stack |> Enum.member?(mode)
-      end
-
-      def current_state(state) do
-        state |> get_state_stack |> Enum.fetch!(0)
       end
 
       # Register-related functions

@@ -65,8 +65,6 @@ defmodule Emulators.Devices do
 
   @impl true
   def handle_cast({:bind, pid, id}, {counter, register, reverse}) do
-    
-
     register =
       register
       |> Map.put(id, pid)

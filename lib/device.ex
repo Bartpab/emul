@@ -7,6 +7,14 @@ defmodule Emulators.Device do
     get_in(state, [:device, :mode])
   end
 
+  def idle(state) do
+    state |> set_mode(:IDLE)
+  end
+
+  def run(state) do
+    state |> set_mode(:RUN)
+  end
+
   def process(state, msg, from) do
     case msg do
       {:GET, :STATE} ->
@@ -33,7 +41,17 @@ defmodule Emulators.Device do
 
       def run({id, opts}) do
         start(opts)
-        |> Map.merge(%{device: %{id: id, mode: :IDLE}})
+        |> Map.merge(%{
+          device: %{
+            id: id,
+            mode: :IDLE,
+            timeslice: {
+              5,
+              :microsecond
+            },
+            last_tick: DateTime.utc_now()
+          }
+        })
         |> Map.merge(Emulators.COM.new())
         |> init
         |> loop
@@ -46,12 +64,30 @@ defmodule Emulators.Device do
           |> Emulators.COM.dispatch(&Device.process/3)
           |> update
           |> Emulators.COM.commit()
-          |> Map.put(:last_tick, NaiveDateTime.utc_now())
+          |> put_in([:device, :last_tick], DateTime.utc_now())
           |> loop
       end
 
+      def update(state, remaining) do
+        {slice, unit} = state[:device][:timeslice]
+
+        unless remaining < slice do
+          state
+          |> frame({slice, unit})
+          |> update(remaining - slice)
+        else
+          state
+        end
+      end
+
       def update(state) do
-        state |> frame
+        now = DateTime.utc_now()
+        last_tick = get_in(state, [:device, :last_tick])
+        {_, unit} = state[:device][:timeslice]
+        remaining = DateTime.diff(now, last_tick, unit)
+        state 
+        |> update(remaining)
+        |> Device.run
       end
     end
   end
