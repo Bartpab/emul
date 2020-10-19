@@ -1,24 +1,24 @@
-defmodule Emulators.S5.GenAP do
-  use Emulators.Device
+defmodule Emulation.S5.GenAP do
+  use Emulation.Device
 
-  alias Emulators.S5.AP.GenState, as: State
-  alias Emulators.PushdownAutomaton, as: PA
-  alias Emulators.S5.Dispatcher
+  alias Emulation.S5.AP.GenState, as: State
+  alias Emulation.Common.PushdownAutomaton, as: PA
+  alias Emulation.S5.Dispatcher
 
-  alias Emulators.State, as: ES
+  alias Emulation.Emulator.State, as: ES
 
   def create(start \\ true) do
-    {:ok, device} = Emulators.Devices.start(__MODULE__)
+    {:ok, device} = Emulation.Devices.start(__MODULE__)
 
     if start do
-      Emulators.Devices.send(device, :START)
+      Emulation.Devices.send(device, :START)
     end
 
     device
   end
 
-  def start(_) do
-    State.new()
+  def start(state, _) do
+    state |> State.new()
   end
 
   def init(state) do
@@ -28,69 +28,18 @@ defmodule Emulators.S5.GenAP do
 
   def call(state, type, id) do
     state
-    |> ES.push({:BLOCK_CALL, {type, id, :external}})
     |> ES.push({:BLOCK_RETURN, {type, id}})
   end
 
-  def process_interrupts(state, dt) do
-    {slice, unit} = dt
-    
+  def process_interrupts(state) do
+    state
+    # state |> Emulation.S5.GenAP.Interrupts.Time.process()
   end
 
   def process_event(state, event) do
-    case event do
-      {:BLOCK_CALL, {_, _, nature}} ->
-        case nature do
-          :internal ->
-            state
-            |> PA.push([:ap, :mode], :INTERPRET)
-
-          :external ->
-            state
-            |> PA.push([:ap, :mode], :EXTERNAL)
-        end
-
-      {:BLOCK_RETURN, _} ->
-        state |> PA.pop([:ap, :mode], :BLOCK_RETURN)
-
-      msg ->
-        state |> Emulators.S5.GenAP.Modes.process_event(msg)
-    end
-  end
-
-  # Process internal events
-  def process_events(state) do
-    state |> ES.poll(&process_event/2)
-  end
-
-  # Process external messages 
-  def process_message(state, msg, _from) do
-    state =
-      case msg do
-        :POWER_ON ->
-          state
-          |> PA.swap([:ap, :mode], :POWER_ON)
-
-        :SHUTDOWN ->
-          state
-          |> ES.push(:REQUEST_SHUTDOWN)
-
-        :START ->
-          state
-          |> ES.push(:REQUEST_START)
-
-        :DISPLAY_STATE ->
-          IO.inspect(state)
-          state
-
-        {:WRITE_BLOCK, {type, id, body}} ->
-          state |> State.write_block(type, id, body)
-
-        _ ->
-          state
-      end
-
-    {:pass, state}
+    state
+    |> Emulation.S5.Events.BlockEventProcessor.process_event(event)
+    |> Emulation.S5.GenAP.Modes.process_event(event)
   end
 
   def process_edges(state, old_state) do
@@ -98,23 +47,52 @@ defmodule Emulators.S5.GenAP do
     |> State.set_edge(:RLO, State.get(state, :RLO) - State.get(old_state, :RLO))
   end
 
-  def process_counters(state) do
+  def process_timers(state, _dt) do
     state
   end
 
-  def process_timers(state, dt) do
-    state
+  def execute_instruction(state) do
+    if PA.current(state, [:ap, :exe]) == :INTERPRET do
+        state = state |> State.next_instr()
+        instr = state |> State.current_instr()
+  
+        state
+        |> Dispatcher.dispatch(State, instr)
+      else
+        state
+      end  
+    end
+
+  def frame(state, {slice, unit}) do
+    remaining = Emulations.Common.Time.convert(slice, unit, :microsecond)
+    state |> run_frames(remaining)
   end
 
-  def frame(state, dt) do
-    state
-    |> Emulators.COM.dispatch(&process_message/3)
-    |> process_events
-    |> process_interrupts(dt)
-    |> Emulators.S5.GenAP.Modes.frame()
-    |> process_timers(dt)
-    |> process_counters
-    |> process_edges(state)
-    |> Emulators.S5.GenAP.Modes.process_transitions
+  def run_frames(state, remaining) do
+    tick = state[:ap][:tick]
+    slice = 50 # Slice per 50 microseconds
+
+    if remaining < slice do
+        state # Not enough time left... for a next time !
+    else
+        if state[:ap][:wait] > 0 do
+            wait = state[:ap][:wait]
+            state
+            |> put_in([:ap, :wait], wait - slice)  
+            |> run_frames(remaining - slice)         
+        else
+            state
+            |> put_in([:ap, :wait], 0)
+            |> Emulation.S5.GenAP.Modes.process_transitions
+            |> dispatch_events(&process_event/2)
+            |> process_interrupts
+            |> Emulation.S5.GenAP.Modes.frame
+            |> execute_instruction
+            |> process_timers(slice)
+            |> process_edges(state)
+            |> put_in([:ap, :tick], tick + slice)
+            |> run_frames(remaining - slice)
+        end
+    end
   end
 end

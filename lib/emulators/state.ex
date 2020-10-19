@@ -1,8 +1,7 @@
-defmodule Emulators.State do
+defmodule Emulation.Emulator.State do
   def new() do
     %{
       emulator: %{
-        interrupt: nil,
         messages: []
       }
     }
@@ -15,7 +14,9 @@ defmodule Emulators.State do
 
   def poll(state, callback) do
     messages = get_in(state, [:emulator, :messages])
-    state |> poll(callback, messages)
+    state 
+    |> put_in([:emulator, :messages], [])
+    |> poll(callback, messages)
   end
 
   def poll(state, callback, messages) do
@@ -25,24 +26,7 @@ defmodule Emulators.State do
         |> callback.(msg)
         |> poll(callback, tail)
 
-      [] ->
-        state |> put_in([:emulator, :messages], [])
+      [] -> state
     end
-  end
-
-  def has_interrupt(state) do
-    state[:emulator][:interrupt] != nil
-  end
-
-  def get_interrupt(state) do
-    get_in(state, [:emulator, :interrupt])
-  end
-
-  def interrupt(state, interrupt) do
-    put_in(state, [:emulator, :interrupt], interrupt)
-  end
-
-  def clear_interrupt(state) do
-    state |> interrupt(nil)
   end
 end

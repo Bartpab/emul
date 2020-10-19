@@ -1,4 +1,4 @@
-defmodule Emulators.S5.Block do
+defmodule Emulation.S5.Block do
   use Bitwise
 
   @header_size 6

@@ -1,10 +1,15 @@
-defmodule Emulators.PushdownAutomaton do
+defmodule Emulation.Common.PushdownAutomaton do
   def new(state, addr) do
     state
     |> put_in(addr, %{
       stack: [:DEFAULT],
-      transitions: []
+      transitions: [],
+      valid: true
     })
+  end
+
+  def is_valid(state, addr) do
+    get_in(state, addr ++ [:valid])
   end
 
   def get_transitions(state, addr) do
@@ -21,6 +26,7 @@ defmodule Emulators.PushdownAutomaton do
     state
     |> process_transitions(addr, callback, transitions)
     |> set_transitions(addr, [])
+    |> put_in(addr ++ [:valid], true)
   end
 
   def process_transitions(state, addr, callback, transitions) do
@@ -41,6 +47,7 @@ defmodule Emulators.PushdownAutomaton do
       |> get_transitions(addr)
 
     state
+    |> put_in(addr ++ [:valid], false)
     |> set_transitions(addr, transitions ++ [transition])
   end
 
@@ -62,8 +69,12 @@ defmodule Emulators.PushdownAutomaton do
   def swap(state, addr, mode, reason \\ :NORMAL) do
     state
     |> push_transition(addr, {mode, state |> current(addr), :SWAPPED, reason})
-    |> get_stack(addr)
-    |> Enum.replace_at!(0)
+    |> set_stack(
+      addr,
+      state
+      |> get_stack(addr)
+      |> List.replace_at(0, mode)
+    )
   end
 
   def push(state, addr, mode, reason \\ :NORMAL) do

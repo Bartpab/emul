@@ -1,12 +1,20 @@
-defmodule Emulators.COM do
+defmodule Emulation.COM do
   defmacro __using__(_) do
     quote do
       def send(state, msg, to) do
-        state |> Emulators.COM.send(msg, to)
+        state |> Emulation.COM.send(msg, to)
       end
 
-      def poll(state, callback) do
-        state |> Emulators.COM.poll(callback)
+      def dispatch_messages(state, callback) do
+        state |> Emulation.COM.dispatch(callback)
+      end
+
+      def poll_messages(state, callback) do
+        state |> Emulation.COM.poll(callback)
+      end
+
+      def commit_messages(state) do
+        state |> Emulation.COM.commit()
       end
     end
   end
@@ -23,16 +31,20 @@ defmodule Emulators.COM do
     )
   end
 
-  def poll(state, messages \\ [], block \\ false) do
+  def poll(state, block \\ false) do
+    state |> poll_msg([], block)
+  end
+
+  def poll_msg(state, messages \\ [], block \\ false) do
     if block do
       receive do
         msg ->
-          state |> poll(messages ++ [msg])
+          state |> poll_msg(messages ++ [msg])
       end
     else
       receive do
         msg ->
-          state |> poll(messages ++ [msg])
+          state |> poll_msg(messages ++ [msg])
       after
         0 ->
           state
@@ -48,7 +60,7 @@ defmodule Emulators.COM do
       if is_pid(to) do
         send(to, {msg, state[:device][:id]})
       else
-        Emulators.Devices.send(to, msg, state[:device][:id])
+        Emulation.Devices.send(to, msg, state[:device][:id])
       end
     end)
 

@@ -1,4 +1,4 @@
-defmodule Emulators.Utils do
+defmodule Emulation.Common.Utils do
   use Bitwise
 
   def compress_chunk(chunk, index, src_size, dest_size, endianess \\ :little_end) do

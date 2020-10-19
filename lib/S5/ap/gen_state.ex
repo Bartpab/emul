@@ -1,7 +1,7 @@
-defmodule Emulators.S5.AP.GenState do
+defmodule Emulation.S5.AP.GenState do
   use Bitwise
-  use Emulators.S5.AP.CommonState
-  alias Emulators.State, as: ES
+  use Emulation.S5.AP.CommonState
+  alias Emulation.Emulator.State, as: ES
 
   def init(state) do
     ap =
@@ -15,10 +15,13 @@ defmodule Emulators.S5.AP.GenState do
           PB: %{},
           DB: %{}
         },
+        flags: %{
+          enable_interrupts: false
+        },
         interrupts: %{
           time: [
-              {{:OB, 10}, {10, :millisecond}, DateTime.utc_now()}
-            ]
+            {{:OB, 10}, {10, :millisecond}, DateTime.utc_now(), false}
+          ]
         },
         PIQ: List.duplicate(0, 0xFF),
         PII: List.duplicate(0, 0xFF),
@@ -40,9 +43,23 @@ defmodule Emulators.S5.AP.GenState do
     |> put_in([:ap], ap)
     |> put_in([:emulator, :stack], [])
   end
+
+  # flags
+  def set_flag(state, type, value) do
+    put_in(state, [:ap, :flags, type], value)
+  end
+
+  def get_flag(state, type) do
+    get_in(state, [:ap, :flags, type])
+  end
+
   # time interruptions
-  def get_timed_interruptions(state) do
+  def get_time_interrupts(state) do
     get_in(state, [:ap, :interrupts, :time])
+  end
+
+  def set_time_interrupts(state, interrupts) do
+    put_in(state, [:ap, :interrupts, :time], interrupts)
   end
 
   # Instructions related
@@ -97,22 +114,21 @@ defmodule Emulators.S5.AP.GenState do
       type == :OB and id >= 40 ->
         # Trigger an interrupt at the emulator level
         # to process the special function.
-        state = state |> ES.push({:CALL, {:OB, id}})
+        state |> ES.push({:CALL, {:OB, id}})
 
       true ->
         unless has_block(state, type, id) do
           raise "Block #{type} #{id} does not exist in memory."
         end
 
-        state =
-          state
-          |> push_bstack({0x0000, get(state, :SAC), get(state, :DBA), get(state, :DBA)})
-          |> set(:SAC, {type, id, -1})
-          |> put_in(
-            [:emulator, :stack],
-            get_in(state, [:emulator, :stack]) ++ [{type, id}]
-          )
-          |> ES.push({:BLOCK_CALL, {type, id, :internal}})
+        state
+        |> push_bstack({0x0000, get(state, :SAC), get(state, :DBA), get(state, :DBA)})
+        |> set(:SAC, {type, id, -1})
+        |> put_in(
+          [:emulator, :stack],
+          get_in(state, [:emulator, :stack]) ++ [{type, id}]
+        )
+        |> ES.push({:BLOCK_CALL, {type, id, :internal}})
     end
   end
 
@@ -236,7 +252,7 @@ defmodule Emulators.S5.AP.GenState do
         state
         |> take_area!(area_type)
         |> Enum.slice(addr, nb)
-        |> Emulators.Utils.adjust(cell_size, data_size)
+        |> Emulation.Common.Utils.adjust(cell_size, data_size)
         |> Enum.fetch!(0)
 
       data_size == cell_size ->
@@ -245,7 +261,7 @@ defmodule Emulators.S5.AP.GenState do
         state
         |> take_area!(area_type)
         |> Enum.slice(addr, 1)
-        |> Emulators.Utils.adjust(cell_size, data_size)
+        |> Emulation.Common.Utils.adjust(cell_size, data_size)
         |> Enum.fetch!(0)
 
       data_size < cell_size ->
@@ -255,12 +271,12 @@ defmodule Emulators.S5.AP.GenState do
           state
           |> take_area!(area_type)
           |> Enum.slice(addr, 1)
-          |> Emulators.Utils.adjust(cell_size, data_size)
+          |> Emulation.Common.Utils.adjust(cell_size, data_size)
           |> Enum.fetch!(0)
 
         shift = op2shift(operand)
         value = value >>> shift
-        flag = Emulators.Utils.expand_flag(data_size)
+        flag = Emulation.Common.Utils.expand_flag(data_size)
         value &&& flag
     end
   end
@@ -300,7 +316,7 @@ defmodule Emulators.S5.AP.GenState do
 
         value =
           values
-          |> Emulators.Utils.adjust(data_size, cell_size)
+          |> Emulation.Common.Utils.adjust(data_size, cell_size)
           |> Enum.fetch!(0)
 
         area =
@@ -313,12 +329,12 @@ defmodule Emulators.S5.AP.GenState do
 
       data_size > cell_size ->
         [addr] = args
-        values = values |> Emulators.Utils.adjust(data_size, cell_size)
+        values = values |> Emulation.Common.Utils.adjust(data_size, cell_size)
 
         area =
           state
           |> take_area!(area_type)
-          |> Emulators.Utils.write(addr, values)
+          |> Emulation.Common.Utils.write(addr, values)
 
         state
         |> write_area(area_type, area)
@@ -328,12 +344,12 @@ defmodule Emulators.S5.AP.GenState do
 
         value =
           values
-          |> Emulators.Utils.adjust(data_size, cell_size)
+          |> Emulation.Common.Utils.adjust(data_size, cell_size)
           |> Enum.fetch!(0)
 
         shift = op2shift(operand)
         value = value <<< shift
-        flag = ~~~(Emulators.Utils.expand_flag(data_size) <<< shift)
+        flag = ~~~(Emulation.Common.Utils.expand_flag(data_size) <<< shift)
 
         current_value =
           state

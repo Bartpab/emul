@@ -1,4 +1,4 @@
-defmodule Emulators.Device do
+defmodule Emulation.Device do
   def set_mode(state, mode) do
     put_in(state, [:device, :mode], mode)
   end
@@ -15,44 +15,63 @@ defmodule Emulators.Device do
     state |> set_mode(:RUN)
   end
 
-  def process(state, msg, from) do
+  def id(state) do
+    state[:device][:id]
+  end
+
+  def new(device_id) do
+    %{
+      device: %{
+        id: device_id,
+        mode: :RUN,
+        timeslice: {
+          16,
+          :millisecond
+        },
+        last_updated: DateTime.utc_now(),
+        tick: DateTime.utc_now()
+      }
+    }
+  end
+
+  def process_message(state, msg, from) do
     case msg do
       {:GET, :STATE} ->
-        state = state |> Emulators.COM.send(from, {:STATE, state})
+        state = state |> Emulation.COM.send(from, {:STATE, state})
         {:pass, state}
 
       :PING ->
-        state = state |> Emulators.COM.send(from, :PONG)
+        state = state |> Emulation.COM.send(from, :PONG)
+        {:pass, state}
+
+      :DISPLAY_STATE ->
+        IO.inspect(state)
         {:pass, state}
 
       _ ->
-        {:keep, state}
+        state = Emulation.Emulator.State.push(state, msg)
+        {:pass, state}
     end
   end
 
   defmacro __using__(_) do
     quote do
       use Task, restart: :temporary
-      alias Emulators.Device
+      use Emulation.COM
+      use Emulation.Emulator
+
+      alias Emulation.Device
 
       def start_link({id, opts} = arg) do
         Task.start_link(__MODULE__, :run, [arg])
       end
 
       def run({id, opts}) do
-        start(opts)
-        |> Map.merge(%{
-          device: %{
-            id: id,
-            mode: :IDLE,
-            timeslice: {
-              5,
-              :microsecond
-            },
-            last_tick: DateTime.utc_now()
-          }
-        })
-        |> Map.merge(Emulators.COM.new())
+        %{}
+        |> Map.merge(Emulation.Device.new(id))
+        |> Map.merge(Emulation.COM.new())
+        |> Map.merge(Emulation.Emulator.State.new())
+        |> start(opts)
         |> init
         |> loop
       end
@@ -60,11 +79,10 @@ defmodule Emulators.Device do
       def loop(state) do
         state =
           state
-          |> Emulators.COM.poll([], state |> Device.mode() == :IDLE)
-          |> Emulators.COM.dispatch(&Device.process/3)
+          |> poll_messages(state |> Device.mode() == :IDLE)
+          |> dispatch_messages(&Device.process_message/3)
           |> update
-          |> Emulators.COM.commit()
-          |> put_in([:device, :last_tick], DateTime.utc_now())
+          |> commit_messages()
           |> loop
       end
 
@@ -72,9 +90,13 @@ defmodule Emulators.Device do
         {slice, unit} = state[:device][:timeslice]
 
         unless remaining < slice do
+          left = remaining - slice
+          tick = DateTime.add(state[:device][:tick], slice, unit)
+
           state
+          |> put_in([:device, :tick], tick)
           |> frame({slice, unit})
-          |> update(remaining - slice)
+          |> update(left)
         else
           state
         end
@@ -82,12 +104,13 @@ defmodule Emulators.Device do
 
       def update(state) do
         now = DateTime.utc_now()
-        last_tick = get_in(state, [:device, :last_tick])
+        last_updated = get_in(state, [:device, :last_updated])
         {_, unit} = state[:device][:timeslice]
-        remaining = DateTime.diff(now, last_tick, unit)
-        state 
+        remaining = DateTime.diff(now, last_updated, unit)
+
+        state
         |> update(remaining)
-        |> Device.run
+        |> put_in([:device, :last_updated], state[:device][:tick])
       end
     end
   end

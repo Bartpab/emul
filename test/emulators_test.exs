@@ -1,3 +1,3 @@
-defmodule EmulatorsTest do
+defmodule EmulationTest do
   use ExUnit.Case
 end

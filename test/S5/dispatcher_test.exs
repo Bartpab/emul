@@ -1,9 +1,9 @@
-defmodule EmulatorsTest.S5.Dispatcher do
+defmodule EmulationTest.S5.Dispatcher do
   use ExUnit.Case
   use Bitwise
 
-  alias Emulators.S5.AP.GenState, as: State
-  alias Emulators.S5.Dispatcher, as: Dispatcher
+  alias Emulation.S5.AP.GenState, as: State
+  alias Emulation.S5.Dispatcher, as: Dispatcher
 
   def start() do
     State.new()

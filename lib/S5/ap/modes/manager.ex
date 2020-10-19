@@ -1,21 +1,26 @@
-defmodule Emulators.S5.GenAP.Modes do
-  alias Emulators.PushdownAutomaton, as: PA
+defmodule Emulation.S5.GenAP.Modes do
+  alias Emulation.Common.PushdownAutomaton, as: PA
 
   @modes %{
-    DEFAULT: Emulators.S5.GenAP.Modes.Default,
-    POWER_OFF: Emulators.S5.GenAP.Modes.PowerOff,
-    STOP: Emulators.S5.GenAP.Modes.Stop,
-    RESTART: Emulators.S5.GenAP.Modes.Restart,
-    RUN: Emulators.S5.GenAP.Modes.Run,
-    CYCLE: Emulators.S5.GenAP.Modes.Cycle,
-    INTERPRET: Emulators.S5.GenAP.Modes.Interpret,
-    EXTERNAL: Emulators.S5.GenAP.Modes.External
+    DEFAULT: Emulation.S5.GenAP.Modes.Default,
+    POWER_OFF: Emulation.S5.GenAP.Modes.PowerOff,
+    STOP: Emulation.S5.GenAP.Modes.Stop,
+    RESTART: Emulation.S5.GenAP.Modes.Restart,
+    RUN: Emulation.S5.GenAP.Modes.Run,
+    CYCLE: Emulation.S5.GenAP.Modes.Cycle,
+    TIME: Emulation.S5.GenAP.Modes.Interrupts.Time
   }
 
   def process_transition(state, {to, from, type, reason}) do
+    class_from =
+      case from do
+        {state, _} -> state
+        _ -> from
+      end
+
     state
-    |> @modes[from].leaving(to, from, type, reason)
-    |> @modes[from].entering(to, from, type, reason)
+    |> @modes[class_from].leaving(to, from, type, reason)
+    |> @modes[class_from].entering(to, from, type, reason)
   end
 
   def process_transitions(state) do
@@ -25,12 +30,30 @@ defmodule Emulators.S5.GenAP.Modes do
 
   def process_event(state, event) do
     current_mode = state |> PA.current([:ap, :mode])
+
+    current_class =
+      case current_mode do
+        {state, _} -> state
+        other -> other
+      end
+
     state
-    |> @modes[current_mode].on_event(event)
+    |> @modes[current_class].on_event(event)
   end
 
   def frame(state) do
-    current_mode = state |> PA.current([:ap, :mode])
-    state |> @modes[current_mode].frame()
+    if state |> PA.is_valid([:ap, :mode]) do
+        current_mode = state |> PA.current([:ap, :mode])
+
+        current_class =
+        case current_mode do
+            {state, _} -> state
+            other -> other
+        end
+
+        state |> @modes[current_class].frame()
+    else
+        state
+    end
   end
 end

@@ -1,12 +1,14 @@
-defmodule Emulators.S5.GenAP.Modes.Stop do
+defmodule Emulation.S5.GenAP.Modes.Stop do
+  alias Emulation.Common.PushdownAutomaton, as: PA
+  alias Emulation.Device
+
   def entering(state, _to, _from, _type, _reason) do
     state
-    |> Device.idle()
   end
 
-  def on_event(state, :REQUEST_START) do
+  def on_event(state, :START) do
     state
-    |> PA.swap(:RESTART)
+    |> PA.swap([:ap, :mode], :RESTART)
     |> Device.run()
   end
 

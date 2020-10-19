@@ -1,10 +1,10 @@
-defmodule Emulators.S5.Dispatcher do
+defmodule Emulation.S5.Dispatcher do
   use Bitwise
 
   def reverse(value, size, chunk \\ 8) do
-    Emulators.Utils.adjust([value], size, chunk)
+    Emulation.Common.Utils.adjust([value], size, chunk)
     |> Enum.reverse()
-    |> Emulators.Utils.adjust(chunk, size)
+    |> Emulation.Common.Utils.adjust(chunk, size)
     |> Enum.fetch!(0)
   end
 

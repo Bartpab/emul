@@ -1,9 +1,12 @@
-defmodule Emulators.S5.GenAP.Modes.Default do
+defmodule Emulation.S5.GenAP.Modes.Default do
+  alias Emulation.Device
+
   def entering(state, _to, _from, _type, _reason) do
-    state
+    state 
+    |> Device.idle()
   end
 
-  def on_event(state, event) do
+  def on_event(state, _event) do
     state
   end
 
@@ -11,7 +14,7 @@ defmodule Emulators.S5.GenAP.Modes.Default do
     state
   end
 
-  def frame(state, event) do
+  def frame(state, _event) do
     state
   end
 end

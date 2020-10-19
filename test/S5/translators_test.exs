@@ -1,7 +1,7 @@
-defmodule EmulatorsTest.S5.Disassembler do
+defmodule EmulationTest.S5.Disassembler do
   use ExUnit.Case
   use Bitwise
-  alias Emulators.S5.AP.Disassembler
+  alias Emulation.S5.AP.Disassembler
 
   test "A C 0xAB" do
     assert {2, :A, :C, [0xAB]} = Disassembler.translate([0xB8AB])
