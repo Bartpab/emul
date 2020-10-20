@@ -31,25 +31,16 @@ defmodule Emulation.COM do
     )
   end
 
-  def poll(state, block \\ false) do
-    state |> poll_msg([], block)
+  def poll(state, timeout \\ 0) do
+    state |> poll_msg([], timeout)
   end
 
-  def poll_msg(state, messages \\ [], block \\ false) do
-    if block do
-      receive do
-        msg ->
-          state |> poll_msg(messages ++ [msg])
-      end
-    else
-      receive do
-        msg ->
-          state |> poll_msg(messages ++ [msg])
-      after
-        0 ->
-          state
-          |> put_in([:COM, :recv], messages)
-      end
+  def poll_msg(state, messages \\ [], timeout \\ 0) do
+    receive do
+      msg ->
+        state |> poll_msg(messages ++ [msg])
+    after
+      timeout -> state |> put_in([:COM, :recv], messages)
     end
   end
 

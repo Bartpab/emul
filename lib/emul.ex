@@ -1,5 +1,5 @@
 defmodule Emulation.Application do
-    require Logger
+  require Logger
   use Application
 
   def start(_, _) do

@@ -2,8 +2,9 @@ defmodule Emulations.Common.Time do
   def convert(value, from, to) do
     case {from, to} do
       {:millisecond, :microsecond} -> value * 100
+      {:second, :microsecond} -> value * 1_000_000
       {same, same} -> value
-      _ -> raise "Not implemented #{from} to #{to}"
+      _ -> raise "Not implemented #{from} to #{to}."
     end
   end
 

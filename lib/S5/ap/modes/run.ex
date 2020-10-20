@@ -1,6 +1,7 @@
-defmodule Emulation.S5.GenAP.Modes.Run do
+defmodule Emulation.S5.AP.Modes.Run do
   alias Emulation.Common.PushdownAutomaton, as: PA
-  alias Emulation.S5.AP.GenState, as: State
+  alias Emulation.S5.AP.State, as: State
+  alias Emulation.Emulator.State, as: ES
   alias Emulation.Device
 
   def entering(state, _to, _from, type, _reason) do
@@ -12,8 +13,21 @@ defmodule Emulation.S5.GenAP.Modes.Run do
     |> Device.run()
   end
 
-  def on_event(state, _event) do
-    state
+  def on_event(state, event) do
+    case event do
+      :RESTART ->
+        state
+        |> ES.push(event)
+        |> PA.swap([:ap, :mode], :RESTART)
+
+      :STOP ->
+        state
+        |> ES.push(event)
+        |> PA.swap([:ap, :mode], :STOP)
+
+      _ ->
+        state
+    end
   end
 
   def leaving(state, _to, _from, type, _reason) do

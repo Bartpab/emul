@@ -1,17 +1,19 @@
-defmodule Emulation.S5.GenAP.Modes do
+defmodule Emulation.S5.AP.Modes do
   alias Emulation.Common.PushdownAutomaton, as: PA
 
   @modes %{
-    DEFAULT: Emulation.S5.GenAP.Modes.Default,
-    POWER_OFF: Emulation.S5.GenAP.Modes.PowerOff,
-    STOP: Emulation.S5.GenAP.Modes.Stop,
-    RESTART: Emulation.S5.GenAP.Modes.Restart,
-    RUN: Emulation.S5.GenAP.Modes.Run,
-    CYCLE: Emulation.S5.GenAP.Modes.Cycle,
-    TIME: Emulation.S5.GenAP.Modes.Interrupts.Time
+    DEFAULT: Emulation.S5.AP.Modes.Default,
+    POWER_OFF: Emulation.S5.AP.Modes.PowerOff,
+    STOP: Emulation.S5.AP.Modes.Stop,
+    RESTART: Emulation.S5.AP.Modes.Restart,
+    RUN: Emulation.S5.AP.Modes.Run,
+    CYCLE: Emulation.S5.AP.Modes.Cycle,
+    TIME: Emulation.S5.AP.Modes.Interrupts.Time
   }
 
-  def process_transition(state, {to, from, type, reason} = transition) do
+  def process_transition(state, {to, from, type, reason}) do
+    IO.inspect(to)
+
     class_from =
       case from do
         {state, _} -> state

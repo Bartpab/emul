@@ -1,4 +1,4 @@
-defmodule Emulation.S5.AP.GenState do
+defmodule Emulation.S5.AP.State do
   use Bitwise
   use Emulation.S5.AP.CommonState
   alias Emulation.Emulator.State, as: ES
@@ -20,7 +20,15 @@ defmodule Emulation.S5.AP.GenState do
         },
         interrupts: %{
           time: [
-            {{:OB, 10}, {10, :millisecond}, 0, false}
+            {{:OB, 10}, {10, :millisecond}, 0, false, false},
+            {{:OB, 11}, {20, :millisecond}, 0, false, false},
+            {{:OB, 12}, {50, :millisecond}, 0, false, false},
+            {{:OB, 13}, {100, :millisecond}, 0, false, false},
+            {{:OB, 14}, {200, :millisecond}, 0, false, false},
+            {{:OB, 15}, {500, :millisecond}, 0, false, false},
+            {{:OB, 16}, {1, :second}, 0, false, false},
+            {{:OB, 17}, {2, :second}, 0, false, false},
+            {{:OB, 18}, {5, :second}, 0, false, false}
           ]
         },
         PIQ: List.duplicate(0, 0xFF),

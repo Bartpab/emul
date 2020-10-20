@@ -1,4 +1,4 @@
-defmodule Emulation.S5.GenAP.Modes.PowerOff do
+defmodule Emulation.S5.AP.Modes.PowerOff do
   alias Emulation.Emulator.State, as: ES
   alias Emulation.Common.PushdownAutomaton, as: PA
   alias Emulation.Device

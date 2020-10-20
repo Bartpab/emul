@@ -13,6 +13,10 @@ defmodule Emulation.Devices do
     {:ok, {0, %{}, %{}}}
   end
 
+  def stop(device) do
+    send(device, :DEVICE_STOP)
+  end
+
   def start(device, opts \\ []) do
     device_id = String.to_atom("device_#{new()}")
 

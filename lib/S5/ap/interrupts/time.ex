@@ -1,5 +1,5 @@
-defmodule Emulation.S5.GenAP.Interrupts.Time do
-  alias Emulation.S5.AP.GenState, as: State
+defmodule Emulation.S5.AP.Interrupts.Time do
+  alias Emulation.S5.AP.State, as: State
   alias Emulation.Common.PushdownAutomaton, as: PA
 
   def get_expired(state) do
@@ -9,16 +9,38 @@ defmodule Emulation.S5.GenAP.Interrupts.Time do
 
   def get_expired(now, timers, index) do
     case timers do
-      [{_, _, exp, _} | tail] ->
-        case Emulations.Common.Time.compare(exp, now) do
-          :gt -> []
-          :lt -> [index]
-          :eq -> [index]
-        end ++ get_expired(now, tail, index + 1)
+      [{_, _, exp, enabled, _executed} | tail] ->
+        if enabled do
+          case Emulations.Common.Time.compare(exp, now) do
+            :gt -> []
+            :lt -> [index]
+            :eq -> [index]
+          end
+        else
+          []
+        end ++
+          get_expired(now, tail, index + 1)
 
       [] ->
         []
     end
+  end
+
+  def map_interrupts(state, timers) do
+    case timers do
+      [{call, time, exp, _enabled, _executed} | tail] ->
+        {type, id} = call
+        enabled = State.has_block(state, type, id)
+        [{call, time, exp, enabled, false}] ++ map_interrupts(state, tail)
+
+      [] ->
+        []
+    end
+  end
+
+  def restart(state) do
+    timers = state |> State.get_time_interrupts()
+    state |> State.set_time_interrupts(map_interrupts(state, timers))
   end
 
   def execute(state, interrupt_id) do
@@ -31,11 +53,10 @@ defmodule Emulation.S5.GenAP.Interrupts.Time do
       {:TIME, priority} ->
         cond do
           exe ->
-            raise "Time interrupt collision for #{type} n°#{id}."
+            raise "Time interrupt collision for #{type} #{id}."
 
           priority < interrupt_id ->
-            state
-            |> PA.push([:ap, :mode], {:TIME, interrupt_id})
+            state |> PA.push([:ap, :mode], {:TIME, interrupt_id})
 
           true ->
             state

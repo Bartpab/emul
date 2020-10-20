@@ -1,4 +1,4 @@
-defmodule Emulation.S5.GenAP.Modes.Default do
+defmodule Emulation.S5.AP.Modes.Default do
   alias Emulation.Device
 
   def entering(state, _to, _from, _type, _reason) do

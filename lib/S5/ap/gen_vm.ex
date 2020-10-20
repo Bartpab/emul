@@ -1,7 +1,7 @@
-defmodule Emulation.S5.GenAP do
+defmodule Emulation.S5.AP do
   use Emulation.Device
 
-  alias Emulation.S5.AP.GenState, as: State
+  alias Emulation.S5.AP.State, as: State
   alias Emulation.Common.PushdownAutomaton, as: PA
   alias Emulation.S5.Dispatcher
 
@@ -32,13 +32,13 @@ defmodule Emulation.S5.GenAP do
   end
 
   def process_interrupts(state) do
-    state |> Emulation.S5.GenAP.Interrupts.Time.process()
+    state |> Emulation.S5.AP.Interrupts.Time.process()
   end
 
   def process_event(state, event) do
     state
     |> Emulation.S5.Events.BlockEventProcessor.process_event(event)
-    |> Emulation.S5.GenAP.Modes.process_event(event)
+    |> Emulation.S5.AP.Modes.process_event(event)
   end
 
   def process_edges(state, old_state) do
@@ -86,10 +86,10 @@ defmodule Emulation.S5.GenAP do
         state
         |> put_in([:ap, :wait], 0)
         |> PA.set_transitions([:ap, :exe], [])
-        |> Emulation.S5.GenAP.Modes.process_transitions()
+        |> Emulation.S5.AP.Modes.process_transitions()
         |> dispatch_events(&process_event/2)
         |> process_interrupts
-        |> Emulation.S5.GenAP.Modes.frame()
+        |> Emulation.S5.AP.Modes.frame()
         |> execute_instruction
         |> process_timers(slice)
         |> process_edges(state)

@@ -1,4 +1,6 @@
 defmodule Emulation.Device do
+  alias Emulation.Device
+
   def set_mode(state, mode) do
     put_in(state, [:device, :mode], mode)
   end
@@ -36,12 +38,8 @@ defmodule Emulation.Device do
 
   def process_message(state, msg, from) do
     case msg do
-      {:GET, :STATE} ->
-        state = state |> Emulation.COM.send(from, {:STATE, state})
-        {:pass, state}
-
-      :PING ->
-        state = state |> Emulation.COM.send(from, :PONG)
+      :DEVICE_STOP ->
+        state = state |> Device.set_mode(:DEVICE_STOP)
         {:pass, state}
 
       :DISPLAY_STATE ->
@@ -56,7 +54,7 @@ defmodule Emulation.Device do
 
   defmacro __using__(_) do
     quote do
-        require Logger
+      require Logger
 
       use Task, restart: :temporary
       use Emulation.COM
@@ -79,13 +77,19 @@ defmodule Emulation.Device do
       end
 
       def loop(state) do
-        state =
+        {timeout, unit} = state[:device][:timeslice]
+
+        unless state |> Device.mode() == :DEVICE_STOP do
+          state =
+            state
+            |> poll_messages(timeout)
+            |> dispatch_messages(&Device.process_message/3)
+            |> update
+            |> commit_messages()
+            |> loop
+        else
           state
-          |> poll_messages(state |> Device.mode() == :IDLE)
-          |> dispatch_messages(&Device.process_message/3)
-          |> update
-          |> commit_messages()
-          |> loop
+        end
       end
 
       def update(state, remaining) do
@@ -96,18 +100,23 @@ defmodule Emulation.Device do
           tick = DateTime.add(state[:device][:tick], slice, unit)
 
           t0 = DateTime.utc_now()
-          state = state
-          |> put_in([:device, :tick], tick)
-          |> frame({slice, unit})
+
+          state =
+            state
+            |> put_in([:device, :tick], tick)
+            |> frame({slice, unit})
+
           t1 = DateTime.utc_now()
 
           elapsed = DateTime.diff(t1, t0, unit)
 
           unless elapsed <= slice do
-            Logger.warn("[#{state |> Device.id}] Time overflow: #{elapsed} instead of #{slice} #{unit}.")
+            Logger.warn(
+              "[#{state |> Device.id()}] Time overflow: #{elapsed} instead of #{slice} #{unit}."
+            )
           end
 
-          state = state |> update(left)
+          state |> update(left)
         else
           state
         end
