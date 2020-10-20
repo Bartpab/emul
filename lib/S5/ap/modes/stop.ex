@@ -14,7 +14,9 @@ defmodule Emulation.S5.AP.Modes.Stop do
       :START ->
         state
         |> PA.swap([:ap, :mode], :RESTART)
-       _ -> state
+
+      _ ->
+        state
     end
   end
 

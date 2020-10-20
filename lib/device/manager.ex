@@ -13,7 +13,7 @@ defmodule Emulation.Devices do
     {:ok, {0, %{}, %{}}}
   end
 
-  def stop(device) do
+  def shutdown(device) do
     send(device, :DEVICE_STOP)
   end
 

@@ -77,8 +77,14 @@ defmodule Emulation.S5.AP.State do
   end
 
   def next_instr(state) do
-    {type, id, offset} = state |> get(:SAC)
-    state |> set(:SAC, {type, id, offset + 1})
+    case state |> get(:SAC) do
+      {type, id, offset} ->
+        state |> set(:SAC, {type, id, offset + 1})
+
+      _ ->
+        IO.inspect(state)
+        raise "No more instructions..."
+    end
   end
 
   # Block related
@@ -102,7 +108,7 @@ defmodule Emulation.S5.AP.State do
   end
 
   def pop_bstack(state) do
-    tail = Enum.slice(4..-1, get_in(state, [:ap, :bstack]))
+    tail = get_in(state, [:ap, :bstack]) |> Enum.slice(4..-1)
     state |> put_in([:ap, :bstack], tail)
   end
 
@@ -141,7 +147,7 @@ defmodule Emulation.S5.AP.State do
   end
 
   def return(state) do
-    [_, sac, dba, dbl] = state |> get_in([:ap, :bstack]) |> Enum.slice(1..4)
+    [_, sac, dba, dbl] = state |> get_in([:ap, :bstack]) |> Enum.slice(0..3)
     [curr | tail] = state |> get_in([:emulator, :stack])
 
     state

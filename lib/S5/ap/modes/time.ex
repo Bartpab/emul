@@ -12,7 +12,6 @@ defmodule Emulation.S5.AP.Modes.Interrupts.Time do
     else
       state
     end
-    |> Device.run()
   end
 
   def on_event(state, event) do
@@ -88,6 +87,10 @@ defmodule Emulation.S5.AP.Modes.Interrupts.Time do
         true
       })
 
-    state |> State.set_time_interrupts(interrupts)
+    {type, id} = call
+
+    state
+    |> State.call(type, id)
+    |> State.set_time_interrupts(interrupts)
   end
 end

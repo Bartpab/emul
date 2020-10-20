@@ -71,8 +71,8 @@ defmodule Emulation.Device do
         |> Map.merge(Emulation.Device.new(id))
         |> Map.merge(Emulation.COM.new())
         |> Map.merge(Emulation.Emulator.State.new())
-        |> start(opts)
-        |> init
+        |> create_device(opts)
+        |> init_device
         |> loop
       end
 

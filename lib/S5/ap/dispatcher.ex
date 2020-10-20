@@ -8,6 +8,12 @@ defmodule Emulation.S5.Dispatcher do
     |> Enum.fetch!(0)
   end
 
+  # DBG
+  def dispatch(state, _mutator, {:DBG, :no_operand, [value]}) do
+    IO.puts(value)
+    state
+  end
+
   # A
   def dispatch(state, mutator, {:A, operand, args})
       when operand in [:I, :Q, :F, :S, :D, :T, :C] do
@@ -149,5 +155,10 @@ defmodule Emulation.S5.Dispatcher do
 
     if state |> mutator.get_edge(:RLO) == :raising do
     end
+  end
+
+  # BE
+  def dispatch(state, mutator, {:BE, _, _}) do
+    state |> mutator.return
   end
 end

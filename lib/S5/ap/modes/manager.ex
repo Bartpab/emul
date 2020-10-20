@@ -12,8 +12,6 @@ defmodule Emulation.S5.AP.Modes do
   }
 
   def process_transition(state, {to, from, type, reason}) do
-    IO.inspect(to)
-
     class_from =
       case from do
         {state, _} -> state

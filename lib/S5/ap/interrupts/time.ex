@@ -31,6 +31,8 @@ defmodule Emulation.S5.AP.Interrupts.Time do
       [{call, time, exp, _enabled, _executed} | tail] ->
         {type, id} = call
         enabled = State.has_block(state, type, id)
+        IO.inspect(call)
+        IO.puts(enabled)
         [{call, time, exp, enabled, false}] ++ map_interrupts(state, tail)
 
       [] ->
@@ -44,7 +46,7 @@ defmodule Emulation.S5.AP.Interrupts.Time do
   end
 
   def execute(state, interrupt_id) do
-    {{type, id}, _, _, exe} =
+    {{type, id}, _timer, _exp, _enabled, exe} =
       state
       |> State.get_time_interrupts()
       |> Enum.fetch!(interrupt_id)

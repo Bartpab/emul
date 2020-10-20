@@ -7,6 +7,7 @@ defmodule Emulation.S5.AP do
 
   alias Emulation.Emulator.State, as: ES
 
+  # API
   def create(start \\ true) do
     {:ok, device} = Emulation.Devices.start(__MODULE__)
 
@@ -17,11 +18,45 @@ defmodule Emulation.S5.AP do
     device
   end
 
-  def start(state, _) do
+  def shutdown(device) do
+    Emulation.Devices.shutdown(device)
+  end
+
+  def stop(device) do
+    Emulation.Devices.send(device, :STOP)
+  end
+
+  def start(device) do
+    Emulation.Devices.send(device, :START)
+  end
+
+  def download_blocks(device, blocks) do
+    stop(device)
+    write_blocks(device, blocks)
+    start(device)
+  end
+
+  defp write_blocks(device, blocks) do
+    case blocks do
+      [head | tail] ->
+        write_block(device, head)
+        write_blocks(device, tail)
+
+      [] ->
+        :ok
+    end
+  end
+
+  defp write_block(device, block) do
+    Emulation.Devices.send(device, {:WRITE_BLOCK, block})
+  end
+
+  # Internals
+  def create_device(state, _) do
     state |> State.new()
   end
 
-  def init(state) do
+  def init_device(state) do
     state
     |> PA.push([:ap, :mode], :POWER_OFF)
   end
@@ -51,12 +86,16 @@ defmodule Emulation.S5.AP do
   end
 
   def execute_instruction(state) do
-    if PA.current(state, [:ap, :exe]) == :INTERPRET do
-      state = state |> State.next_instr()
-      instr = state |> State.current_instr()
+    if PA.is_valid(state, [:ap, :mode]) do
+      if PA.current(state, [:ap, :exe]) == :INTERPRET do
+        state = state |> State.next_instr()
+        instr = state |> State.current_instr()
 
-      state
-      |> Dispatcher.dispatch(State, instr)
+        state
+        |> Dispatcher.dispatch(State, instr)
+      else
+        state
+      end
     else
       state
     end
