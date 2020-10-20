@@ -8,9 +8,9 @@ defmodule Emulation.S5.Dispatcher do
     |> Enum.fetch!(0)
   end
 
-  # DBG
-  def dispatch(state, _mutator, {:DBG, :no_operand, [value]}) do
-    IO.puts(value)
+  # FOO
+  def dispatch(state, mutator, {:FOO, :no_operand, []}) do
+    IO.inspect(state |> mutator.get(:SAC))
     state
   end
 

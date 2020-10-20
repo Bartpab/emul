@@ -4,16 +4,9 @@ defmodule Emulation.S5.AP.Bootstrap do
   def create() do
     device = AP.create()
 
-    AP.download_blocks(device, [
-      {:OB, 1,
-       [
-         {:BE, :no_operand, []}
-       ]},
-      {:OB, 11,
-       [
-         {:BE, :no_operand, []}
-       ]}
-    ])
+    {:ok, blocks} = Emulation.S5.STL.load("codes/default.stl")
+
+    AP.download_blocks(device, blocks)
 
     device
   end
