@@ -11,16 +11,22 @@ defmodule Emulation.S5.GenAP.Modes do
     TIME: Emulation.S5.GenAP.Modes.Interrupts.Time
   }
 
-  def process_transition(state, {to, from, type, reason}) do
+  def process_transition(state, {to, from, type, reason} = transition) do
     class_from =
       case from do
         {state, _} -> state
         _ -> from
       end
 
+    class_to =
+      case to do
+        {state, _} -> state
+        _ -> to
+      end
+
     state
     |> @modes[class_from].leaving(to, from, type, reason)
-    |> @modes[class_from].entering(to, from, type, reason)
+    |> @modes[class_to].entering(to, from, type, reason)
   end
 
   def process_transitions(state) do
@@ -43,17 +49,17 @@ defmodule Emulation.S5.GenAP.Modes do
 
   def frame(state) do
     if state |> PA.is_valid([:ap, :mode]) do
-        current_mode = state |> PA.current([:ap, :mode])
+      current_mode = state |> PA.current([:ap, :mode])
 
-        current_class =
+      current_class =
         case current_mode do
-            {state, _} -> state
-            other -> other
+          {state, _} -> state
+          other -> other
         end
 
-        state |> @modes[current_class].frame()
+      state |> @modes[current_class].frame()
     else
-        state
+      state
     end
   end
 end

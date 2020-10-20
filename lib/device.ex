@@ -56,6 +56,8 @@ defmodule Emulation.Device do
 
   defmacro __using__(_) do
     quote do
+        require Logger
+
       use Task, restart: :temporary
       use Emulation.COM
       use Emulation.Emulator
@@ -93,10 +95,19 @@ defmodule Emulation.Device do
           left = remaining - slice
           tick = DateTime.add(state[:device][:tick], slice, unit)
 
-          state
+          t0 = DateTime.utc_now()
+          state = state
           |> put_in([:device, :tick], tick)
           |> frame({slice, unit})
-          |> update(left)
+          t1 = DateTime.utc_now()
+
+          elapsed = DateTime.diff(t1, t0, unit)
+
+          unless elapsed <= slice do
+            Logger.warn("[#{state |> Device.id}] Time overflow: #{elapsed} instead of #{slice} #{unit}.")
+          end
+
+          state = state |> update(left)
         else
           state
         end

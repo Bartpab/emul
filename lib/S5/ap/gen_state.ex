@@ -20,7 +20,7 @@ defmodule Emulation.S5.AP.GenState do
         },
         interrupts: %{
           time: [
-            {{:OB, 10}, {10, :millisecond}, DateTime.utc_now(), false}
+            {{:OB, 10}, {10, :millisecond}, 0, false}
           ]
         },
         PIQ: List.duplicate(0, 0xFF),

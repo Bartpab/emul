@@ -24,8 +24,8 @@ defmodule Emulation.Common.PushdownAutomaton do
     transitions = state |> get_transitions(addr)
 
     state
-    |> process_transitions(addr, callback, transitions)
     |> set_transitions(addr, [])
+    |> process_transitions(addr, callback, transitions)
     |> put_in(addr ++ [:valid], true)
   end
 

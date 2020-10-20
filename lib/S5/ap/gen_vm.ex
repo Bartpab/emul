@@ -32,8 +32,7 @@ defmodule Emulation.S5.GenAP do
   end
 
   def process_interrupts(state) do
-    state
-    # state |> Emulation.S5.GenAP.Interrupts.Time.process()
+    state |> Emulation.S5.GenAP.Interrupts.Time.process()
   end
 
   def process_event(state, event) do
@@ -53,15 +52,15 @@ defmodule Emulation.S5.GenAP do
 
   def execute_instruction(state) do
     if PA.current(state, [:ap, :exe]) == :INTERPRET do
-        state = state |> State.next_instr()
-        instr = state |> State.current_instr()
-  
-        state
-        |> Dispatcher.dispatch(State, instr)
-      else
-        state
-      end  
+      state = state |> State.next_instr()
+      instr = state |> State.current_instr()
+
+      state
+      |> Dispatcher.dispatch(State, instr)
+    else
+      state
     end
+  end
 
   def frame(state, {slice, unit}) do
     remaining = Emulations.Common.Time.convert(slice, unit, :microsecond)
@@ -69,30 +68,34 @@ defmodule Emulation.S5.GenAP do
   end
 
   def run_frames(state, remaining) do
-    tick = state[:ap][:tick]
-    slice = 50 # Slice per 50 microseconds
+    tick = state |> State.now()
+    # Slice per 50 microseconds
+    slice = 10
 
     if remaining < slice do
-        state # Not enough time left... for a next time !
+      # Not enough time left... for a next time !
+      state
     else
-        if state[:ap][:wait] > 0 do
-            wait = state[:ap][:wait]
-            state
-            |> put_in([:ap, :wait], wait - slice)  
-            |> run_frames(remaining - slice)         
-        else
-            state
-            |> put_in([:ap, :wait], 0)
-            |> Emulation.S5.GenAP.Modes.process_transitions
-            |> dispatch_events(&process_event/2)
-            |> process_interrupts
-            |> Emulation.S5.GenAP.Modes.frame
-            |> execute_instruction
-            |> process_timers(slice)
-            |> process_edges(state)
-            |> put_in([:ap, :tick], tick + slice)
-            |> run_frames(remaining - slice)
-        end
+      if state[:ap][:wait] > 0 do
+        wait = state[:ap][:wait]
+
+        state
+        |> put_in([:ap, :wait], wait - slice)
+        |> run_frames(remaining - slice)
+      else
+        state
+        |> put_in([:ap, :wait], 0)
+        |> PA.set_transitions([:ap, :exe], [])
+        |> Emulation.S5.GenAP.Modes.process_transitions()
+        |> dispatch_events(&process_event/2)
+        |> process_interrupts
+        |> Emulation.S5.GenAP.Modes.frame()
+        |> execute_instruction
+        |> process_timers(slice)
+        |> process_edges(state)
+        |> put_in([:ap, :tick], tick + slice)
+        |> run_frames(remaining - slice)
+      end
     end
   end
 end

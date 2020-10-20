@@ -33,8 +33,10 @@ defmodule Emulation.S5.AP.CommonState do
         edges: %{
           RLO: :stay
         },
-        tick: 0, # microseconds
-        wait: 0, # Wait in microseconds
+        # microseconds
+        tick: 0,
+        # Wait in microseconds
+        wait: 0,
         states: [:DEFAULT],
         transitions: []
       }
@@ -49,6 +51,10 @@ defmodule Emulation.S5.AP.CommonState do
         |> Emulation.Common.PushdownAutomaton.new([:ap, :mode])
         |> Emulation.Common.PushdownAutomaton.new([:ap, :exe])
         |> init()
+      end
+
+      def now(state) do
+        state[:ap][:tick]
       end
 
       # Register-related functions

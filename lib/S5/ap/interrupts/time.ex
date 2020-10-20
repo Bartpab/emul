@@ -4,7 +4,7 @@ defmodule Emulation.S5.GenAP.Interrupts.Time do
 
   def get_expired(state) do
     timers = state |> State.get_time_interrupts()
-    get_expired(state[:ap][:tick], timers, 0)
+    get_expired(state |> State.now(), timers, 0)
   end
 
   def get_expired(now, timers, index) do
@@ -14,7 +14,7 @@ defmodule Emulation.S5.GenAP.Interrupts.Time do
           :gt -> []
           :lt -> [index]
           :eq -> [index]
-        end ++ get_expired(now, tail, index)
+        end ++ get_expired(now, tail, index + 1)
 
       [] ->
         []
@@ -51,7 +51,7 @@ defmodule Emulation.S5.GenAP.Interrupts.Time do
       expired = get_expired(state)
 
       case expired do
-        [head | _] -> execute(state, head)
+        [head | _] -> state |> execute(head)
         [] -> state
       end
     else

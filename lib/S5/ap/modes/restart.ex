@@ -5,17 +5,13 @@ defmodule Emulation.S5.GenAP.Modes.Restart do
   def entering(state, _to, _from, _type, :BLOCK_RETURN) do
     state
     |> PA.swap([:ap, :mode], :RUN)
-    |> Device.run
-  end
-
-  def entering(state, _to, _from, _type, _reason) do
-    state
+    |> Device.run()
   end
 
   def entering(state, _to, :STOP, _type, _reason) do
     state
     |> PA.swap([:ap, :mode], :RUN)
-    |> Device.run
+    |> Device.run()
   end
 
   def on_event(state, _event) do

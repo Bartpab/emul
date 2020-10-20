@@ -14,7 +14,8 @@ defmodule Emulation.Emulator.State do
 
   def poll(state, callback) do
     messages = get_in(state, [:emulator, :messages])
-    state 
+
+    state
     |> put_in([:emulator, :messages], [])
     |> poll(callback, messages)
   end
@@ -26,7 +27,8 @@ defmodule Emulation.Emulator.State do
         |> callback.(msg)
         |> poll(callback, tail)
 
-      [] -> state
+      [] ->
+        state
     end
   end
 end

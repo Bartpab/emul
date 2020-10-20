@@ -52,8 +52,7 @@ defmodule Emulation.S5.GenAP.Modes.Interrupts.Time do
       false
     })
 
-    state
-    |> State.set_time_interrupts(interrupts)
+    state |> State.set_time_interrupts(interrupts)
   end
 
   def execute(state, interrupt_id) do
@@ -61,18 +60,18 @@ defmodule Emulation.S5.GenAP.Modes.Interrupts.Time do
     {call, frequency, _, _} = interrupts |> Enum.fetch!(interrupt_id)
 
     {dt, unit} = frequency
-    now = state[:ap][:tick]
+    now = state |> State.now()
     exp = now + Emulations.Common.Time.convert(dt, unit, :microsecond)
 
-    interrupts
-    |> List.replace_at(interrupt_id, {
-      call,
-      frequency,
-      exp,
-      true
-    })
+    interrupts =
+      interrupts
+      |> List.replace_at(interrupt_id, {
+        call,
+        frequency,
+        exp,
+        true
+      })
 
-    state
-    |> State.set_time_interrupts(interrupts)
+    state |> State.set_time_interrupts(interrupts)
   end
 end
