@@ -8,9 +8,9 @@ defmodule Emulation.S5.Dispatcher do
     |> Enum.fetch!(0)
   end
 
-  # FOO
-  def dispatch(state, mutator, {:FOO, :no_operand, []}) do
-    IO.inspect(state |> mutator.get(:SAC))
+  # SHOW
+  def dispatch(state, mutator, {:SHOW, operand, args}) do
+    IO.puts(state |> mutator.get(operand, args))
     state
   end
 
@@ -150,10 +150,38 @@ defmodule Emulation.S5.Dispatcher do
 
   # SP
   def dispatch(state, mutator, {:SP, :T, args}) do
-    _timer_id = args |> Enum.fetch!(0)
-    _timer_value = state |> mutator.get(:ACCU_1_L)
+    timer_id = args |> Enum.fetch!(0)
+    timer_value = state |> mutator.get(:ACCU_1_L)
 
     if state |> mutator.get_edge(:RLO) == :raising do
+      state |> Emulation.S5.AP.Services.Timers.activate(timer_id, timer_value)
+    else
+      state
+    end
+  end
+
+  # R
+  def dispatch(state, mutator, {:R, :T, args}) do
+    timer_id = args |> Enum.fetch!(0)
+
+    if state |> mutator.get_edge(:RLO) == :raising do
+      state |> Emulation.S5.AP.Services.Timers.reset(timer_id)
+    else
+      state
+    end
+  end
+
+  # JU Jump
+  def dispatch(state, mutator, {:JU, operand, [id]}) do
+    state |> mutator.call(operand, id)
+  end
+
+  # JC Jump Conditional
+  def dispatch(state, mutator, {:JC, operand, [id]}) do
+    if mutator.get(state, :RLO) do
+      state |> mutator.call(operand, id)
+    else
+      state
     end
   end
 
@@ -165,5 +193,19 @@ defmodule Emulation.S5.Dispatcher do
   # BE
   def dispatch(state, mutator, {:BE, _, _}) do
     state |> mutator.return
+  end
+
+  # BEU
+  def dispatch(state, mutator, {:BEU, _, _}) do
+    state |> mutator.return
+  end
+
+  # BEC
+  def dispatch(state, mutator, {:BEC, _, _}) do
+    if mutator.get(state, :RLO) do
+      state |> mutator.return
+    else
+      state
+    end
   end
 end

@@ -3,7 +3,8 @@
 -file("src/s5_stl_parser.yrl", 48).
 
 
-extract_token({_Token, _Line, Value}) -> Value.
+extract_token({Token, _Line, Value}) -> Value.
+
 uw_int({int, Line, Value}) -> {int, Line, list_to_integer(Value)}.
 uw_atom({Type, Line, Value}) ->{Type, Line, list_to_atom(Value)}.
 
@@ -179,7 +180,7 @@ yecctoken2string(Other) ->
 
 
 
--file("src/s5_stl_parser.erl", 182).
+-file("src/s5_stl_parser.erl", 183).
 
 -dialyzer({nowarn_function, yeccpars2/7}).
 yeccpars2(0=S, Cat, Ss, Stack, T, Ts, Tzr) ->
@@ -222,7 +223,7 @@ yeccpars2(Other, _, _, _, _, _, _) ->
  erlang:error({yecc_bug,"1.4",{missing_state_in_action_table, Other}}).
 
 -dialyzer({nowarn_function, yeccpars2_0/7}).
-yeccpars2_0(S, btype, Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_0(S, data_type, Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 4, Ss, Stack, T, Ts, Tzr);
 yeccpars2_0(_, _, _, _, T, _, _) ->
  yeccerror(T).
@@ -236,7 +237,7 @@ yeccpars2_1(_, _, _, _, T, _, _) ->
 yeccpars2_2(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccgoto_root(hd(Ss), Cat, Ss, Stack, T, Ts, Tzr).
 
-yeccpars2_3(S, btype, Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_3(S, data_type, Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 4, Ss, Stack, T, Ts, Tzr);
 yeccpars2_3(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_3_(Stack),
@@ -385,7 +386,7 @@ yeccpars2_11_(__Stack0) ->
    {
     extract_token ( uw_atom ( __1 ) ) ,
     extract_token ( uw_atom ( __2 ) ) ,
-    extract_token ( __3 )
+    __3
     }
   end | __Stack].
 
@@ -394,7 +395,7 @@ yeccpars2_11_(__Stack0) ->
 yeccpars2_12_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
-   [ uw_int ( __1 ) ]
+   [ extract_token ( uw_int ( __1 ) ) ]
   end | __Stack].
 
 -compile({inline,yeccpars2_14_/1}).
@@ -402,7 +403,7 @@ yeccpars2_12_(__Stack0) ->
 yeccpars2_14_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
-   [ uw_int ( __2 ) , uw_int ( __1 ) ]
+   [ extract_token ( uw_int ( __3 ) ) , extract_token ( uw_int ( __1 ) ) ]
   end | __Stack].
 
 -compile({inline,yeccpars2_15_/1}).
@@ -430,8 +431,8 @@ yeccpars2_16_(__Stack0) ->
 yeccpars2_17_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
-   lists : merge ( [ __1 ] , __2 )
+   lists : append ( [ [ __1 ] , __2 ] )
   end | __Stack].
 
 
--file("src/s5_stl_parser.yrl", 54).
+-file("src/s5_stl_parser.yrl", 55).

@@ -77,8 +77,7 @@ defmodule Emulation.S5.AP do
   end
 
   def process_edges(state, old_state) do
-    state
-    |> State.set_edge(:RLO, State.get(state, :RLO) - State.get(old_state, :RLO))
+    state |> Emulation.S5.AP.Services.Edges.process(old_state)
   end
 
   def process_timers(state, _dt) do
@@ -109,7 +108,7 @@ defmodule Emulation.S5.AP do
   def run_frames(state, remaining) do
     tick = state |> State.now()
     # Slice per 50 microseconds
-    slice = 10
+    slice = 100
 
     if remaining < slice do
       # Not enough time left... for a next time !

@@ -2,6 +2,7 @@ defmodule Emulation.S5.STL do
   def load(filepath) do
     {:ok, content} = File.read(filepath)
     {:ok, tokens, _} = :s5_stl_lexer.string(content |> String.to_charlist())
+    IO.inspect(tokens)
     :s5_stl_parser.parse(tokens)
   end
 

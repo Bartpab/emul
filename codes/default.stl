@@ -1,7 +1,7 @@
 OB 1:
-NOP_0
+JU PB 1
 BE
 
-OB 11:
-NOP_0
+PB 1:
+SHOW IB 10
 BE

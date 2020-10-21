@@ -4,7 +4,7 @@ defmodule Emulation.S5.AP.Services.Timers do
 
   def get_running_timers(state) do
     timers = state |> State.take_area!(:T)
-    rec_get_running_timers(state, timers)
+    rec_get_running_timers(timers, 0)
   end
 
   def rec_get_running_timers(timers, index \\ 0) do

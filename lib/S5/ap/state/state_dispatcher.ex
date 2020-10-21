@@ -112,6 +112,10 @@ defmodule Emulation.S5.AP.StateDispatcher do
     dispatch(state).set(state, operand, args, values)
   end
 
+  def get(state, operand, args) do
+    dispatch(state).get(state, operand, args)
+  end
+
   # Register related
   def get(state, register) do
     dispatch(state).get(state, register)

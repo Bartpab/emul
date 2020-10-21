@@ -11,6 +11,7 @@ defmodule Emulation.Common.Utils do
       [digit | tail] ->
         shift = index * 4
         digit <<< (shift + to_bcd(tail, index + 1))
+
       [] ->
         0
     end

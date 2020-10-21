@@ -2,9 +2,8 @@ Definitions.
 
 INT = [0-9]+
 POINT = [.]
-DATA_TYPE = (I|IB|IW|ID|Q|QB|QW|QD)
-OPERATION = (FOO|A|AN|O|ON|NOP_0)
-BTYPE     = (OB|PB)
+DATA_TYPE = (I|IB|IW|ID|Q|QB|QW|QD|OB|PB|SB|FB)
+OPERATION = (SHOW|A|AN|O|ON|JC|JU|BEU|BEC|NOP_0)
 BE        = (BE)
 
 Rules.
@@ -14,7 +13,7 @@ Rules.
 {POINT}         : {token, {point, TokenLine, TokenChars}}.
 {BTYPE}         : {token, {btype, TokenLine, TokenChars}}.
 {BE}            : {token, {be, TokenLine, TokenChars}}.
-[:]              : {token, {dp, TokenLine, TokenChars}}.
+[:]             : {token, {dp, TokenLine, TokenChars}}.
 [\s\t\n\r]+     : skip_token.
 
 Erlang code.
