@@ -1,6 +1,6 @@
 defmodule Emulation.S5.AP.Modes.Cycle do
   alias Emulation.Common.PushdownAutomaton, as: PA
-  alias Emulation.S5.AP.State, as: State
+  alias Emulation.S5.AP.StateDispatcher, as: State
   alias Emulation.Emulator.State, as: ES
 
   def entering(state, _to, _from, _type, _reason) do

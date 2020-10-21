@@ -3,7 +3,7 @@ Definitions.
 INT = [0-9]+
 POINT = [.]
 DATA_TYPE = (I|IB|IW|ID|Q|QB|QW|QD)
-OPERATION = (FOO|A|AN|O|ON)
+OPERATION = (FOO|A|AN|O|ON|NOP_0)
 BTYPE     = (OB|PB)
 BE        = (BE)
 

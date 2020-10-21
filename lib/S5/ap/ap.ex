@@ -1,7 +1,7 @@
 defmodule Emulation.S5.AP do
   use Emulation.Device
 
-  alias Emulation.S5.AP.State, as: State
+  alias Emulation.S5.AP.StateDispatcher, as: State
   alias Emulation.Common.PushdownAutomaton, as: PA
   alias Emulation.S5.Dispatcher
 
@@ -53,7 +53,7 @@ defmodule Emulation.S5.AP do
 
   # Internals
   def create_device(state, _) do
-    state |> State.new()
+    state |> Emulation.S5.AP.GenericState.new()
   end
 
   def init_device(state) do
@@ -82,7 +82,7 @@ defmodule Emulation.S5.AP do
   end
 
   def process_timers(state, _dt) do
-    state
+    state |> Emulation.S5.AP.Services.Timers.process()
   end
 
   def execute_instruction(state) do

@@ -1,7 +1,7 @@
 OB 1:
-FOO
+NOP_0
 BE
 
 OB 11:
-FOO
+NOP_0
 BE

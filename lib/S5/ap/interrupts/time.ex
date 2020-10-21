@@ -1,5 +1,5 @@
 defmodule Emulation.S5.AP.Interrupts.Time do
-  alias Emulation.S5.AP.State, as: State
+  alias Emulation.S5.AP.StateDispatcher, as: State
   alias Emulation.Common.PushdownAutomaton, as: PA
 
   def get_expired(state) do

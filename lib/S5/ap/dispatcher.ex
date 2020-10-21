@@ -157,6 +157,11 @@ defmodule Emulation.S5.Dispatcher do
     end
   end
 
+  # NOP 0
+  def dispatch(state, _mutator, {:NOP_0, _, _}) do
+    state
+  end
+
   # BE
   def dispatch(state, mutator, {:BE, _, _}) do
     state |> mutator.return

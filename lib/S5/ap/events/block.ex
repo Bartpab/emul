@@ -1,6 +1,6 @@
 defmodule Emulation.S5.Events.BlockEventProcessor do
   alias Emulation.Common.PushdownAutomaton, as: PA
-  alias Emulation.S5.AP.State
+  alias Emulation.S5.AP.StateDispatcher, as: State
 
   def process_event(state, event) do
     case event do

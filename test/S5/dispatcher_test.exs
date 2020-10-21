@@ -2,7 +2,7 @@ defmodule EmulationTest.S5.Dispatcher do
   use ExUnit.Case
   use Bitwise
 
-  alias Emulation.S5.AP.State, as: State
+  alias Emulation.S5.AP.StateDispatcher, as: State
   alias Emulation.S5.Dispatcher, as: Dispatcher
 
   def start() do

@@ -84,8 +84,8 @@ defmodule Emulation.S5.AP.CommonState do
       def set_edge(state, edge, value) do
         edge_direction =
           case value do
-            -1 -> :negative
-            1 -> :positive
+            -1 -> :falling
+            1 -> :raising
             0 -> :stay
           end
 

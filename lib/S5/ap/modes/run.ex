@@ -1,6 +1,6 @@
 defmodule Emulation.S5.AP.Modes.Run do
   alias Emulation.Common.PushdownAutomaton, as: PA
-  alias Emulation.S5.AP.State, as: State
+  alias Emulation.S5.AP.StateDispatcher, as: State
   alias Emulation.Emulator.State, as: ES
   alias Emulation.Device
 

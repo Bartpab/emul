@@ -3,6 +3,7 @@ defmodule Emulations.Common.Time do
     case {from, to} do
       {:millisecond, :microsecond} -> value * 100
       {:second, :microsecond} -> value * 1_000_000
+      {:microsecond, :second} -> value / 1_000_000
       {same, same} -> value
       _ -> raise "Not implemented #{from} to #{to}."
     end

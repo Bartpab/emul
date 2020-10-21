@@ -1,5 +1,6 @@
-defmodule Emulation.S5.AP.State do
+defmodule Emulation.S5.AP.GenericState do
   use Bitwise
+  use Emulation.S5.AP.State.Utils
   use Emulation.S5.AP.CommonState
   alias Emulation.Emulator.State, as: ES
 
@@ -31,6 +32,7 @@ defmodule Emulation.S5.AP.State do
             {{:OB, 18}, {5, :second}, 0, false, false}
           ]
         },
+        timer_ticks: List.duplicate(0, 0xFF),
         PIQ: List.duplicate(0, 0xFF),
         PII: List.duplicate(0, 0xFF),
         F: List.duplicate(0, 0xFF),
@@ -50,6 +52,17 @@ defmodule Emulation.S5.AP.State do
     state
     |> put_in([:ap], ap)
     |> put_in([:emulator, :stack], [])
+  end
+
+  # timer
+  def set_timer_last_tick(state, timer_id, tick) do
+    timers = get_in(state, [:ap, :timer_ticks])
+    timers = timers |> List.replace_at(timer_id, tick)
+    put_in(state, [:ap, :timer_ticks], timers)
+  end
+
+  def get_timer_last_tick(state, timer_id) do
+    get_in(state, [:ap, :timer_ticks]) |> Enum.fetch!(timer_id)
   end
 
   # flags
@@ -169,7 +182,7 @@ defmodule Emulation.S5.AP.State do
     end
   end
 
-  def write_area(state, area, values) do
+  def write_area!(state, area, values) do
     case area do
       :D ->
         {type, id} = state |> get(:DBA)
@@ -179,64 +192,6 @@ defmodule Emulation.S5.AP.State do
         state |> put_in([:ap, other], values)
     end
   end
-
-  def op2area(operand) do
-    cond do
-      operand in [:Q, :QB, :QW, :QD] -> :PIQ
-      operand in [:I, :IB, :IW, :ID] -> :PII
-      operand in [:C] -> :C
-      operand in [:T] -> :T
-      operand in [:PY, :PW] -> :P
-      operand in [:OY, :OW] -> :O
-      operand in [:F, :FY, :FW, :FD] -> :F
-      operand in [:S, :SY, :SW, :SD] -> :S
-      operand in [:DR, :DL, :DW, :DD] -> :D
-    end
-  end
-
-  def op2shift(operand) do
-    case operand do
-      :DL -> 8
-      _ -> 0
-    end
-  end
-
-  def get_cell_size(area) do
-    case area do
-      :PIQ -> 8
-      :PII -> 8
-      :P -> 8
-      :O -> 8
-      :F -> 8
-      :S -> 8
-      :D -> 16
-      :C -> 16
-      :T -> 16
-    end
-  end
-
-  def get_data_size(operand) do
-    cond do
-      operand in [:Q, :I, :F, :S] -> 1
-      operand in [:QB, :IB, :PY, :OY, :FY, :SY, :DR, :DL] -> 8
-      operand in [:QW, :IW, :PW, :OW, :FW, :SW, :DW, :C, :T] -> 16
-      operand in [:QD, :ID, :FD, :SD, :DD] -> 32
-    end
-  end
-
-  defguard is_constant(operand)
-           when operand in [
-                  :DH,
-                  :KB,
-                  :KC,
-                  :KF,
-                  :KG,
-                  :KH,
-                  :KM,
-                  :KS,
-                  :KT,
-                  :KY
-                ]
 
   def get(_, operand, args)
       when is_constant(operand) do
@@ -323,7 +278,7 @@ defmodule Emulation.S5.AP.State do
           |> List.replace_at(addr, value)
 
         state
-        |> write_area(area_type, area)
+        |> write_area!(area_type, area)
 
       data_size == cell_size ->
         [addr] = args
@@ -339,7 +294,7 @@ defmodule Emulation.S5.AP.State do
           |> List.replace_at(addr, value)
 
         state
-        |> write_area(area_type, area)
+        |> write_area!(area_type, area)
 
       data_size > cell_size ->
         [addr] = args
@@ -351,7 +306,7 @@ defmodule Emulation.S5.AP.State do
           |> Emulation.Common.Utils.write(addr, values)
 
         state
-        |> write_area(area_type, area)
+        |> write_area!(area_type, area)
 
       data_size < cell_size ->
         [addr] = args
@@ -378,7 +333,7 @@ defmodule Emulation.S5.AP.State do
           |> List.replace_at(addr, value)
 
         state
-        |> write_area(area_type, area)
+        |> write_area!(area_type, area)
     end
   end
 end

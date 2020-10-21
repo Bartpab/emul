@@ -1,6 +1,50 @@
 defmodule Emulation.Common.Utils do
   use Bitwise
 
+  def to_bcd(value) do
+    read_decimals(value)
+    |> to_bcd(0)
+  end
+
+  def to_bcd(decimals, index) do
+    case decimals do
+      [digit | tail] ->
+        shift = index * 4
+        digit <<< (shift + to_bcd(tail, index + 1))
+      [] ->
+        0
+    end
+  end
+
+  def from_bcd(binary, size) do
+    read_decimals_from_bcd(binary, 0, size)
+  end
+
+  def read_decimals_from_bcd(value, index, size) do
+    if index >= size do
+      0
+    else
+      shift = index * 4
+      mask = 0xF <<< shift
+      digit = mask &&& value
+      :math.pow(10, index) * digit + read_decimals_from_bcd(value, index + 1, size)
+    end
+  end
+
+  def read_decimals(value, begin \\ true) do
+    cond do
+      value == 0 and !begin ->
+        []
+
+      value == 0 and begin ->
+        [0] ++ read_decimals(value / 10, false)
+
+      true ->
+        digit = rem(value, 10)
+        [digit] ++ read_decimals(value / 10, false)
+    end
+  end
+
   def compress_chunk(chunk, index, src_size, dest_size, endianess \\ :little_end) do
     max = ((dest_size / src_size) |> trunc) - 1
 
