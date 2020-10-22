@@ -27,6 +27,10 @@ defmodule EmulationTest.FP32 do
   end
 
   test "decode FP32 0x41460000 => 12.375" do
-    assert 12.375 = FP32.decode(0x41460000)
+    assert 12.375 == FP32.decode(0x41460000)
+  end
+
+  test "encode decode" do
+    assert -0.375 = -0.375 |> FP32.encode |> FP32.decode
   end
 end

@@ -24,8 +24,8 @@ defmodule Emulation.Common.FP32 do
   alias Emulation.Common.ShiftRegister
 
   def decode(value) do
-    sign = (value &&& 0x80000000) >>> 31
-    exponent = (value &&& 0xFF <<< 23) >>> 23
+    sign = value >>> 31
+    exponent = (value &&& (0xFF <<< 23)) >>> 23
     fraction = (value &&& 0x7FFFFF) |> trunc |> decode_fraction
 
     :math.pow(-1, sign) * (1.0 + fraction) * :math.pow(2, exponent - 127)
@@ -65,9 +65,9 @@ defmodule Emulation.Common.FP32 do
       integer == 0 and fraction == 0 ->
         {{0, 0}, exponent}
 
-      integer == 0 and fraction > 0 ->
+      integer == 0 and fraction != 0 ->
         {digit, fraction} = ShiftRegister.pop_left(fraction, 22)
-        integer = ShiftRegister.push_left(integer, digit, 0)
+        integer = ShiftRegister.push_left(integer, digit)
         normalise({integer, fraction}, exponent - 1)
 
       integer > 1 ->
@@ -81,18 +81,13 @@ defmodule Emulation.Common.FP32 do
   end
 
   def encode(value) do
-    sign =
-      if value >= 0 do
-        0
-      else
-        1
-      end
+    sign = if value >= 0 do 0 else 1 end
 
-    integer = value |> trunc
-    fraction = (value - integer) |> encode_fraction(0, 0, 22)
+    integer = abs(value |> trunc)
+    fraction = (abs(value) - integer) |> encode_fraction(0, 0, 22)
     {{_, mantisse}, exponent} = normalise({integer, fraction})
     exponent = 127 + exponent
-    (sign <<< 32) + (exponent <<< 23) + mantisse
+    (sign <<< 31) + (exponent <<< 23) + mantisse
   end
 
   def add(v1, v2) do
