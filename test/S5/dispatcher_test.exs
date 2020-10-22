@@ -6,7 +6,11 @@ defmodule EmulationTest.S5.Dispatcher do
   alias Emulation.S5.Dispatcher, as: Dispatcher
 
   def start() do
-    State.new()
+    Emulation.S5.AP.GenericState.new(%{
+      emulator: %{
+        stack: []
+      }
+    })
   end
 
   test "dispatch A I 0xF.1 with 1 and 0" do

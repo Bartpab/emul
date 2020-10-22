@@ -1,3 +1,162 @@
+defmodule Emulation.Common.ShiftRegister do
+  use Bitwise
+
+  def push_right(slot, value, at) do
+    (slot >>> 1) + (value <<< at)
+  end
+
+  def push_left(slot, value) do
+    (slot <<< 1) + value
+  end
+
+  def pop_right(slot) do
+    {slot &&& 1, slot >>> 1}
+  end
+
+  def pop_left(slot, at) do
+    mask = 1 <<< at
+    {(slot &&& mask) >>> at, (slot &&& ~~~mask) <<< 1}
+  end
+end
+
+defmodule Emulation.Common.FP32 do
+  use Bitwise
+  alias Emulation.Common.ShiftRegister
+
+  def decode(value) do
+    sign = (value &&& 0x80000000) >>> 31
+    exponent = (value &&& 0xFF <<< 23) >>> 23
+    fraction = (value &&& 0x7FFFFF) |> trunc |> decode_fraction
+
+    :math.pow(-1, sign) * (1.0 + fraction) * :math.pow(2, exponent - 127)
+  end
+
+  def decode_fraction(fraction, index \\ 0) do
+    rank = index + 1
+
+    if index == 22 do
+      0
+    else
+      {digit, fraction} = ShiftRegister.pop_left(fraction, 22)
+      digit * :math.pow(2, -rank) + decode_fraction(fraction, index + 1)
+    end
+  end
+
+  def encode_fraction(fraction, value, index, max) do
+    case fraction do
+      0.0 ->
+        value
+
+      fraction ->
+        fraction = fraction * 2
+        digit = rem(fraction |> trunc, 2)
+
+        if index <= max do
+          encode_fraction(fraction, value, index + 1, max)
+          |> ShiftRegister.push_right(digit, 22)          
+        else
+          value
+        end
+    end
+  end
+
+  def normalise({integer, fraction}, exponent \\ 0) do
+    cond do
+      integer == 0 and fraction == 0 ->
+        {{0, 0}, exponent}
+
+      integer == 0 and fraction > 0 ->
+        {digit, fraction} = ShiftRegister.pop_left(fraction, 22)
+        integer = ShiftRegister.push_left(integer, digit, 0)
+        normalise({integer, fraction}, exponent - 1)
+
+      integer > 1 ->
+        {digit, integer} = ShiftRegister.pop_right(integer)
+        fraction = ShiftRegister.push_right(fraction, digit, 22)
+        normalise({integer, fraction}, exponent + 1)
+
+      integer == 1 ->
+        {{integer, fraction}, exponent}
+    end
+  end
+
+  def encode(value) do
+    sign =
+      if value >= 0 do
+        0
+      else
+        1
+      end
+
+    integer = value |> trunc
+    fraction = (value - integer) |> encode_fraction(0, 0, 22)
+    {{_, mantisse}, exponent} = normalise({integer, fraction})
+    exponent = 127 + exponent
+    (sign <<< 32) + (exponent <<< 23) + mantisse
+  end
+
+  def add(v1, v2) do
+    v1 |> decode
+
+    +(v2 |> decode)
+    |> encode
+  end
+
+  def substract(v1, v2) do
+    v1 |> decode
+
+    -(v2 |> decode)
+    |> encode
+  end
+
+  def multiply(v1, v2) do
+    ((v1 |> decode) *
+       (v2 |> decode))
+    |> encode
+  end
+
+  def divide(v1, v2) do
+    ((v1 |> decode) /
+       (v2 |> decode))
+    |> encode
+  end
+end
+
+defmodule Emulation.Common.FixedPointWord do
+  use Bitwise
+
+  def check_limits(v) do
+    cond do
+      v > 0x7FFF -> {:overflow, v}
+      v < -1 * 0x8000 -> {:underflow, v}
+      true -> {:ok, v}
+    end
+  end
+
+  def multiply(v1, v2) do
+    k = 1 <<< 7
+    v = v1 * v2 + k
+    check_limits(v >>> 8)
+  end
+
+  def divide(v1, v2) do
+    result = div(v1, v2)
+    remainder = rem(v1, v2)
+
+    {result, remainder}
+  end
+
+  def substract(v1, v2) do
+    v = v1 - v2
+    check_limits(v)
+  end
+
+  def add(v1, v2) do
+    v = v1 + v2
+    check_limits(v)
+  end
+end
+
 defmodule Emulation.Common.Utils do
   use Bitwise
 

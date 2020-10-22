@@ -16,29 +16,53 @@ defmodule Emulation.S5.Dispatcher do
 
   # A
   def dispatch(state, mutator, {:A, operand, args})
-      when operand in [:I, :Q, :F, :S, :D, :T, :C] do
+      when operand in [:T, :C] do
     result = mutator.get(state, :RLO) &&& mutator.get(state, operand, args)
+    state |> mutator.set(:RLO, result)
+  end
+
+  def dispatch(state, mutator, {:A, operand, args})
+      when operand in [:T, :C] do
+    result = mutator.get(state, :RLO) &&& mutator.get(state, operand, args) > 0
     state |> mutator.set(:RLO, result)
   end
 
   # AN
   def dispatch(state, mutator, {:AN, operand, args})
-      when operand in [:I, :Q, :F, :S, :D, :T, :C] do
+      when operand in [:I, :Q, :F, :S, :D] do
     result = mutator.get(state, :RLO) &&& ~~~mutator.get(state, operand, args)
+    state |> mutator.set(:RLO, result)
+  end
+
+  def dispatch(state, mutator, {:AN, operand, args})
+      when operand in [:T, :C] do
+    result = mutator.get(state, :RLO) &&& ~~~(mutator.get(state, operand, args) > 0)
     state |> mutator.set(:RLO, result)
   end
 
   # O
   def dispatch(state, mutator, {:O, operand, args})
-      when operand in [:I, :Q, :F, :S, :D, :T, :C] do
+      when operand in [:I, :Q, :F, :S, :D] do
     result = mutator.get(state, :RLO) ||| mutator.get(state, operand, args)
+    state |> mutator.set(:RLO, result)
+  end
+
+  def dispatch(state, mutator, {:O, operand, args})
+      when operand in [:T, :C] do
+    result = mutator.get(state, :RLO) ||| mutator.get(state, operand, args) > 0
     state |> mutator.set(:RLO, result)
   end
 
   # ON
   def dispatch(state, mutator, {:ON, operand, args})
-      when operand in [:I, :Q, :F, :S, :D, :T, :C] do
+      when operand in [:I, :Q, :F, :S, :D] do
     result = mutator.get(state, :RLO) ||| mutator.get(state, operand, args)
+    state |> mutator.set(:RLO, ~~~result)
+  end
+
+  def dispatch(state, mutator, {:ON, operand, args})
+      when operand in [:T, :C] do
+    result = mutator.get(state, :RLO) ||| mutator.get(state, operand, args) > 0
     state |> mutator.set(:RLO, ~~~result)
   end
 
@@ -160,6 +184,54 @@ defmodule Emulation.S5.Dispatcher do
     end
   end
 
+  # SE
+  def dispatch(state, mutator, {:SE, :T, args}) do
+    timer_id = args |> Enum.fetch!(0)
+    timer_value = state |> mutator.get(:ACCU_1_L)
+
+    if state |> mutator.get_edge(:RLO) == :raising do
+      state |> Emulation.S5.AP.Services.Timers.activate(timer_id, timer_value)
+    else
+      state
+    end
+  end
+
+  # SD
+  def dispatch(state, mutator, {:SD, :T, args}) do
+    timer_id = args |> Enum.fetch!(0)
+    timer_value = state |> mutator.get(:ACCU_1_L)
+
+    if state |> mutator.get_edge(:RLO) == :raising do
+      state |> Emulation.S5.AP.Services.Timers.activate(timer_id, timer_value)
+    else
+      state
+    end
+  end
+
+  # SS
+  def dispatch(state, mutator, {:SS, :T, args}) do
+    timer_id = args |> Enum.fetch!(0)
+    timer_value = state |> mutator.get(:ACCU_1_L)
+
+    if state |> mutator.get_edge(:RLO) == :raising do
+      state |> Emulation.S5.AP.Services.Timers.activate(timer_id, timer_value)
+    else
+      state
+    end
+  end
+
+  # SF
+  def dispatch(state, mutator, {:SF, :T, args}) do
+    timer_id = args |> Enum.fetch!(0)
+    timer_value = state |> mutator.get(:ACCU_1_L)
+
+    if state |> mutator.get_edge(:RLO) == :raising do
+      state |> Emulation.S5.AP.Services.Timers.activate(timer_id, timer_value)
+    else
+      state
+    end
+  end
+
   # R
   def dispatch(state, mutator, {:R, :T, args}) do
     timer_id = args |> Enum.fetch!(0)
@@ -169,6 +241,29 @@ defmodule Emulation.S5.Dispatcher do
     else
       state
     end
+  end
+
+  # CU
+  def dispatch(state, mutator, {:CU, :T, args}) do
+    counter = mutator.get(state, :T, args) + 1
+    state |> mutator.set(:T, args, counter)
+  end
+
+  # CD
+  def dispatch(state, mutator, {:CD, :T, args}) do
+    counter = mutator.get(state, :T, args) - 1
+    state |> mutator.set(:T, args, counter)
+  end
+
+  # S
+  def dispatch(state, mutator, {:S, :C, args}) do
+    counter = state |> mutator.get(:ACCU_1_L)
+    state |> mutator.set(:T, args, counter)
+  end
+
+  # S
+  def dispatch(state, mutator, {:R, :C, args}) do
+    state |> mutator.set(:T, args, 0)
   end
 
   # JU Jump
@@ -207,5 +302,109 @@ defmodule Emulation.S5.Dispatcher do
     else
       state
     end
+  end
+
+  def store_f_result(state, mutator, value) do
+    state
+    |> mutator.set(:ACCU_1, value)
+    |> mutator.set(:ACCU_2_L, mutator.get(state, :ACCU_3_L))
+    |> mutator.set(:ACCU_3_L, mutator.get(state, :ACCU_4_L))
+  end
+
+  # +F
+  def dispatch(state, mutator, {:add_F, _, _}) do
+    v1 = state |> mutator.get(:ACCU_1_L)
+    v2 = state |> mutator.get(:ACCU_2_L)
+
+    {status, v} = Emulation.Common.FixedPointWord.add(v1, v2)
+
+    state
+    |> store_f_result(mutator, v)
+  end
+
+  # -F
+  def dispatch(state, mutator, {:sub_F, _, _}) do
+    v1 = state |> mutator.get(:ACCU_1_L)
+    v2 = state |> mutator.get(:ACCU_2_L)
+
+    {status, v} = Emulation.Common.FixedPointWord.substract(v1, v2)
+
+    state
+    |> store_f_result(mutator, v)
+  end
+
+  # xF
+  def dispatch(state, mutator, {:mult_F, _, _}) do
+    v1 = state |> mutator.get(:ACCU_1_L)
+    v2 = state |> mutator.get(:ACCU_2_L)
+
+    {status, v} = Emulation.Common.FixedPointWord.multiply(v1, v2)
+
+    state
+    |> store_f_result(mutator, v)
+  end
+
+  # :F
+  def dispatch(state, mutator, {:div_F, _, _}) do
+    v1 = state |> mutator.get(:ACCU_1_L)
+    v2 = state |> mutator.get(:ACCU_2_L)
+
+    {result, remainder} = Emulation.Common.FixedPointWord.divide(v1, v2)
+
+    v = (remainder <<< 16) + result
+
+    state
+    |> store_f_result(mutator, v)
+  end
+
+  def store_g_result(state, mutator, value) do
+    state
+    |> mutator.set(:ACCU_1, value)
+    |> mutator.set(:ACCU_2, mutator.get(state, :ACCU_3))
+    |> mutator.set(:ACCU_3, mutator.get(state, :ACCU_4))
+  end
+
+  # +G
+  def dispatch(state, mutator, {:add_G, _, _}) do
+    v1 = state |> mutator.get(:ACCU_1)
+    v2 = state |> mutator.get(:ACCU_2)
+
+    v = v1 + v2
+
+    state
+    |> store_g_result(mutator, v)
+  end
+
+  # -G
+  def dispatch(state, mutator, {:sub_G, _, _}) do
+    v1 = state |> mutator.get(:ACCU_1)
+    v2 = state |> mutator.get(:ACCU_2)
+
+    v = v1 - v2
+
+    state
+    |> store_g_result(mutator, v)
+  end
+
+  # xF
+  def dispatch(state, mutator, {:mult_G, _, _}) do
+    v1 = state |> mutator.get(:ACCU_1)
+    v2 = state |> mutator.get(:ACCU_2)
+
+    v = v1 * v2
+
+    state
+    |> store_g_result(mutator, v)
+  end
+
+  # :G
+  def dispatch(state, mutator, {:div_G, _, _}) do
+    v1 = state |> mutator.get(:ACCU_1)
+    v2 = state |> mutator.get(:ACCU_2)
+
+    v = v1 / v2
+
+    state
+    |> store_g_result(mutator, v)
   end
 end
