@@ -369,7 +369,7 @@ defmodule Emulation.S5.Dispatcher do
     v1 = state |> mutator.get(:ACCU_1)
     v2 = state |> mutator.get(:ACCU_2)
 
-    v = v1 + v2
+    v = Emulation.Common.FP32.add(v1, v2)
 
     state
     |> store_g_result(mutator, v)
@@ -380,18 +380,18 @@ defmodule Emulation.S5.Dispatcher do
     v1 = state |> mutator.get(:ACCU_1)
     v2 = state |> mutator.get(:ACCU_2)
 
-    v = v1 - v2
+    v = Emulation.Common.FP32.substract(v1, v2)
 
     state
     |> store_g_result(mutator, v)
   end
 
-  # xF
+  # xG
   def dispatch(state, mutator, {:mult_G, _, _}) do
     v1 = state |> mutator.get(:ACCU_1)
     v2 = state |> mutator.get(:ACCU_2)
 
-    v = v1 * v2
+    v = Emulation.Common.FP32.multiply(v1, v2)
 
     state
     |> store_g_result(mutator, v)
@@ -402,9 +402,63 @@ defmodule Emulation.S5.Dispatcher do
     v1 = state |> mutator.get(:ACCU_1)
     v2 = state |> mutator.get(:ACCU_2)
 
-    v = v1 / v2
+    v = Emulation.Common.FP32.divide(v1, v2)
 
     state
     |> store_g_result(mutator, v)
+  end
+
+  # !=G (equal)
+  def dispatch(state, mutator, {:eq_G, _, _}) do
+    v1 = state |> mutator.get(:ACCU_2)
+    v2 = state |> mutator.get(:ACCU_1)
+
+    state
+    |> mutator.set(:RLO, Emulation.Common.FP32.eq(v1, v2))
+  end
+
+  # ><G (not equal)
+  def dispatch(state, mutator, {:neq_G, _, _}) do
+    v1 = state |> mutator.get(:ACCU_2)
+    v2 = state |> mutator.get(:ACCU_1)
+
+    state
+    |> mutator.set(:RLO, Emulation.Common.FP32.neq(v1, v2))
+  end
+
+  # >G (greater than)
+  def dispatch(state, mutator, {:gt_G, _, _}) do
+    v1 = state |> mutator.get(:ACCU_2)
+    v2 = state |> mutator.get(:ACCU_1)
+
+    state
+    |> mutator.set(:RLO, Emulation.Common.FP32.gt(v1, v2))
+  end
+
+  # >=G (greater than or equal)
+  def dispatch(state, mutator, {:gte_G, _, _}) do
+    v1 = state |> mutator.get(:ACCU_2)
+    v2 = state |> mutator.get(:ACCU_1)
+
+    state
+    |> mutator.set(:RLO, Emulation.Common.FP32.gte(v1, v2))
+  end
+
+  # <G (lower than)
+  def dispatch(state, mutator, {:lt_G, _, _}) do
+    v1 = state |> mutator.get(:ACCU_2)
+    v2 = state |> mutator.get(:ACCU_1)
+
+    state
+    |> mutator.set(:RLO, Emulation.Common.FP32.lt(v1, v2))
+  end
+
+  # <=G (lower than or equal)
+  def dispatch(state, mutator, {:lte_G, _, _}) do
+    v1 = state |> mutator.get(:ACCU_2)
+    v2 = state |> mutator.get(:ACCU_1)
+
+    state
+    |> mutator.set(:RLO, Emulation.Common.FP32.lte(v1, v2))
   end
 end
