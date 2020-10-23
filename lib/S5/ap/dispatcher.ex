@@ -446,7 +446,7 @@ defmodule Emulation.S5.Dispatcher do
 
   # <G (lower than)
   def dispatch(state, mutator, {:lt_G, _, _}) do
-    v1 = state |> mutator.get(:ACCU_2)
+    v1 = state |> mutator.get(:ACCU_2)g
     v2 = state |> mutator.get(:ACCU_1)
 
     state
