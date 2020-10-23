@@ -28,6 +28,10 @@ defmodule Emulation.S5.AP.StateDispatcher do
     dispatch(state).get_edge(state, edge)
   end
 
+  def stop(state) do
+    dispatch(state).stop(state)
+  end
+
   # State specialisation (do implement)
   # Flag related
   def set_flag(state, type, value) do
@@ -66,6 +70,10 @@ defmodule Emulation.S5.AP.StateDispatcher do
   end
 
   # Block-related functions
+  def generate_block(state, type, id, size) do
+    dispatch(state).generate_block(state, type, id, size)
+  end
+
   def write_block(state, type, id, instrs) do
     dispatch(state).write_block(state, type, id, instrs)
   end

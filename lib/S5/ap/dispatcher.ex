@@ -10,20 +10,38 @@ defmodule Emulation.S5.Dispatcher do
 
   # SHOW
   def dispatch(state, mutator, {:SHOW, operand, args}) do
-    IO.puts(state |> mutator.get(operand, args))
+    value = state |> mutator.get(operand, args)
+
+    case operand do
+      :T ->
+        {{slice, unit}, remaining} = Emulation.S5.AP.Services.Timers.read(value)
+        IO.puts("#{remaining} (#{slice} #{unit})")
+
+      _ ->
+        IO.inspect(value)
+    end
+
     state
+  end
+
+  def sup(value) do
+    if value > 0 do
+      1
+    else
+      0
+    end
   end
 
   # A
   def dispatch(state, mutator, {:A, operand, args})
-      when operand in [:T, :C] do
+      when operand in [:I, :Q, :F, :S, :D] do
     result = mutator.get(state, :RLO) &&& mutator.get(state, operand, args)
     state |> mutator.set(:RLO, result)
   end
 
   def dispatch(state, mutator, {:A, operand, args})
       when operand in [:T, :C] do
-    result = mutator.get(state, :RLO) &&& mutator.get(state, operand, args) > 0
+    result = mutator.get(state, :RLO) &&& mutator.get(state, operand, args) |> sup
     state |> mutator.set(:RLO, result)
   end
 
@@ -36,7 +54,7 @@ defmodule Emulation.S5.Dispatcher do
 
   def dispatch(state, mutator, {:AN, operand, args})
       when operand in [:T, :C] do
-    result = mutator.get(state, :RLO) &&& ~~~(mutator.get(state, operand, args) > 0)
+    result = mutator.get(state, :RLO) &&& ~~~(mutator.get(state, operand, args) |> sup)
     state |> mutator.set(:RLO, result)
   end
 
@@ -49,7 +67,7 @@ defmodule Emulation.S5.Dispatcher do
 
   def dispatch(state, mutator, {:O, operand, args})
       when operand in [:T, :C] do
-    result = mutator.get(state, :RLO) ||| mutator.get(state, operand, args) > 0
+    result = mutator.get(state, :RLO) ||| mutator.get(state, operand, args) |> sup
     state |> mutator.set(:RLO, result)
   end
 
@@ -62,7 +80,7 @@ defmodule Emulation.S5.Dispatcher do
 
   def dispatch(state, mutator, {:ON, operand, args})
       when operand in [:T, :C] do
-    result = mutator.get(state, :RLO) ||| mutator.get(state, operand, args) > 0
+    result = mutator.get(state, :RLO) ||| mutator.get(state, operand, args) |> sup
     state |> mutator.set(:RLO, ~~~result)
   end
 
@@ -76,6 +94,7 @@ defmodule Emulation.S5.Dispatcher do
     else
       state
     end
+    |> mutator.set(:RLO, 0)
   end
 
   # R
@@ -88,6 +107,7 @@ defmodule Emulation.S5.Dispatcher do
     else
       state
     end
+    |> mutator.set(:RLO, 0)
   end
 
   # =
@@ -182,6 +202,7 @@ defmodule Emulation.S5.Dispatcher do
     else
       state
     end
+    |> mutator.set(:RLO, 0)
   end
 
   # SE
@@ -194,6 +215,7 @@ defmodule Emulation.S5.Dispatcher do
     else
       state
     end
+    |> mutator.set(:RLO, 0)
   end
 
   # SD
@@ -206,6 +228,7 @@ defmodule Emulation.S5.Dispatcher do
     else
       state
     end
+    |> mutator.set(:RLO, 0)
   end
 
   # SS
@@ -218,6 +241,7 @@ defmodule Emulation.S5.Dispatcher do
     else
       state
     end
+    |> mutator.set(:RLO, 0)
   end
 
   # SF
@@ -230,6 +254,7 @@ defmodule Emulation.S5.Dispatcher do
     else
       state
     end
+    |> mutator.set(:RLO, 0)
   end
 
   # R
@@ -241,6 +266,7 @@ defmodule Emulation.S5.Dispatcher do
     else
       state
     end
+    |> mutator.set(:RLO, 0)
   end
 
   # CU
@@ -258,50 +284,12 @@ defmodule Emulation.S5.Dispatcher do
   # S
   def dispatch(state, mutator, {:S, :C, args}) do
     counter = state |> mutator.get(:ACCU_1_L)
-    state |> mutator.set(:T, args, counter)
+    state |> mutator.set(:T, args, counter) |> mutator.set(:RLO, 0)
   end
 
   # S
   def dispatch(state, mutator, {:R, :C, args}) do
-    state |> mutator.set(:T, args, 0)
-  end
-
-  # JU Jump
-  def dispatch(state, mutator, {:JU, operand, [id]}) do
-    state |> mutator.call(operand, id)
-  end
-
-  # JC Jump Conditional
-  def dispatch(state, mutator, {:JC, operand, [id]}) do
-    if mutator.get(state, :RLO) do
-      state |> mutator.call(operand, id)
-    else
-      state
-    end
-  end
-
-  # NOP 0
-  def dispatch(state, _mutator, {:NOP_0, _, _}) do
-    state
-  end
-
-  # BE
-  def dispatch(state, mutator, {:BE, _, _}) do
-    state |> mutator.return
-  end
-
-  # BEU
-  def dispatch(state, mutator, {:BEU, _, _}) do
-    state |> mutator.return
-  end
-
-  # BEC
-  def dispatch(state, mutator, {:BEC, _, _}) do
-    if mutator.get(state, :RLO) do
-      state |> mutator.return
-    else
-      state
-    end
+    state |> mutator.set(:T, args, 0) |> mutator.set(:RLO, 0)
   end
 
   def store_f_result(state, mutator, value) do
@@ -312,7 +300,7 @@ defmodule Emulation.S5.Dispatcher do
   end
 
   # +F
-  def dispatch(state, mutator, {:add_F, _, _}) do
+  def dispatch(state, mutator, {:"+F", _, _}) do
     v1 = state |> mutator.get(:ACCU_1_L)
     v2 = state |> mutator.get(:ACCU_2_L)
 
@@ -323,7 +311,7 @@ defmodule Emulation.S5.Dispatcher do
   end
 
   # -F
-  def dispatch(state, mutator, {:sub_F, _, _}) do
+  def dispatch(state, mutator, {:"-F", _, _}) do
     v1 = state |> mutator.get(:ACCU_1_L)
     v2 = state |> mutator.get(:ACCU_2_L)
 
@@ -334,7 +322,7 @@ defmodule Emulation.S5.Dispatcher do
   end
 
   # xF
-  def dispatch(state, mutator, {:mult_F, _, _}) do
+  def dispatch(state, mutator, {:xF, _, _}) do
     v1 = state |> mutator.get(:ACCU_1_L)
     v2 = state |> mutator.get(:ACCU_2_L)
 
@@ -345,7 +333,7 @@ defmodule Emulation.S5.Dispatcher do
   end
 
   # :F
-  def dispatch(state, mutator, {:div_F, _, _}) do
+  def dispatch(state, mutator, {:":F", _, _}) do
     v1 = state |> mutator.get(:ACCU_1_L)
     v2 = state |> mutator.get(:ACCU_2_L)
 
@@ -365,7 +353,7 @@ defmodule Emulation.S5.Dispatcher do
   end
 
   # +G
-  def dispatch(state, mutator, {:add_G, _, _}) do
+  def dispatch(state, mutator, {:"+G", _, _}) do
     v1 = state |> mutator.get(:ACCU_1)
     v2 = state |> mutator.get(:ACCU_2)
 
@@ -376,7 +364,7 @@ defmodule Emulation.S5.Dispatcher do
   end
 
   # -G
-  def dispatch(state, mutator, {:sub_G, _, _}) do
+  def dispatch(state, mutator, {:"-G", _, _}) do
     v1 = state |> mutator.get(:ACCU_1)
     v2 = state |> mutator.get(:ACCU_2)
 
@@ -387,7 +375,7 @@ defmodule Emulation.S5.Dispatcher do
   end
 
   # xG
-  def dispatch(state, mutator, {:mult_G, _, _}) do
+  def dispatch(state, mutator, {:xG, _, _}) do
     v1 = state |> mutator.get(:ACCU_1)
     v2 = state |> mutator.get(:ACCU_2)
 
@@ -398,7 +386,7 @@ defmodule Emulation.S5.Dispatcher do
   end
 
   # :G
-  def dispatch(state, mutator, {:div_G, _, _}) do
+  def dispatch(state, mutator, {:":G", _, _}) do
     v1 = state |> mutator.get(:ACCU_1)
     v2 = state |> mutator.get(:ACCU_2)
 
@@ -409,7 +397,7 @@ defmodule Emulation.S5.Dispatcher do
   end
 
   # !=G (equal)
-  def dispatch(state, mutator, {:eq_G, _, _}) do
+  def dispatch(state, mutator, {:"!=G", _, _}) do
     v1 = state |> mutator.get(:ACCU_2)
     v2 = state |> mutator.get(:ACCU_1)
 
@@ -418,7 +406,7 @@ defmodule Emulation.S5.Dispatcher do
   end
 
   # ><G (not equal)
-  def dispatch(state, mutator, {:neq_G, _, _}) do
+  def dispatch(state, mutator, {:"><G", _, _}) do
     v1 = state |> mutator.get(:ACCU_2)
     v2 = state |> mutator.get(:ACCU_1)
 
@@ -427,7 +415,7 @@ defmodule Emulation.S5.Dispatcher do
   end
 
   # >G (greater than)
-  def dispatch(state, mutator, {:gt_G, _, _}) do
+  def dispatch(state, mutator, {:">G", _, _}) do
     v1 = state |> mutator.get(:ACCU_2)
     v2 = state |> mutator.get(:ACCU_1)
 
@@ -436,7 +424,7 @@ defmodule Emulation.S5.Dispatcher do
   end
 
   # >=G (greater than or equal)
-  def dispatch(state, mutator, {:gte_G, _, _}) do
+  def dispatch(state, mutator, {:"=>G", _, _}) do
     v1 = state |> mutator.get(:ACCU_2)
     v2 = state |> mutator.get(:ACCU_1)
 
@@ -445,20 +433,220 @@ defmodule Emulation.S5.Dispatcher do
   end
 
   # <G (lower than)
-  def dispatch(state, mutator, {:lt_G, _, _}) do
-    v1 = state |> mutator.get(:ACCU_2)g
+  def dispatch(state, mutator, {:"<G", _, _}) do
+    v1 = state |> mutator.get(:ACCU_2)
     v2 = state |> mutator.get(:ACCU_1)
 
     state
     |> mutator.set(:RLO, Emulation.Common.FP32.lt(v1, v2))
   end
 
-  # <=G (lower than or equal)
-  def dispatch(state, mutator, {:lte_G, _, _}) do
+  # =<G (lower than or equal)
+  def dispatch(state, mutator, {:"=<G", _, _}) do
     v1 = state |> mutator.get(:ACCU_2)
     v2 = state |> mutator.get(:ACCU_1)
 
     state
     |> mutator.set(:RLO, Emulation.Common.FP32.lte(v1, v2))
+  end
+
+  # JU Jump
+  def dispatch(state, mutator, {:JU, operand, [id]})
+      when operand in [:PB, :FB, :SB, :OB] do
+    state |> mutator.call(operand, id)
+  end
+
+  # JC Jump Conditional
+  # 
+  def dispatch(state, mutator, {:JC, operand, [id]})
+      when operand in [:PB, :FB, :SB, :OB] do
+    if mutator.get(state, :RLO) do
+      state |> mutator.call(operand, id)
+    else
+      state
+    end
+  end
+
+  # Call Data Block (C)
+  # Call a data block
+  def dispatch(state, mutator, {:C, :DB, [id]}) do
+    state |> mutator.open(:DB, id)
+  end
+
+  # Call Extended Data Block (CX)
+  # Call an extended data block
+  def dispatch(state, mutator, {:CX, :DX, [id]}) do
+    state |> mutator.open(:DX, id)
+  end
+
+  # Generate a Block (G)
+  # Generate a data block. The number of its data
+  # words must be stored in ACCU 1 (max. 4091 DW)
+  def dispatch(state, mutator, {:G, :DB, [id]}) do
+    size = state |> mutator.get(:ACCU_1)
+    state |> mutator.generate_block(:DB, id, size)
+  end
+
+  # Generate a Block (GX)
+  # Generate an extended data block. The number of
+  # its data words must be stored in ACCU 1 (max.
+  # 4091 DW)
+  def dispatch(state, mutator, {:GX, :DX, [id]}) do
+    size = state |> mutator.get(:ACCU_1)
+    state |> mutator.generate_block(:DX, id, size)
+  end
+
+  # BE
+  # Block end (termination of a block)
+  def dispatch(state, mutator, {:BE, _, _}) do
+    state |> mutator.return
+  end
+
+  # BEU
+  # Block end, unconditional
+  def dispatch(state, mutator, {:BEU, _, _}) do
+    state |> mutator.return
+  end
+
+  # BEC
+  # Block end, conditional (if RLO is "1")
+  def dispatch(state, mutator, {:BEC, _, _}) do
+    if mutator.get(state, :RLO) do
+      state |> mutator.return
+    else
+      state
+    end
+  end
+
+  # NOP 0
+  # No operation (all bits set to 0)
+  def dispatch(state, _mutator, {:NOP_0, _, _}) do
+    state
+  end
+
+  # NOP 1
+  # No operation (all bits set to 1)
+  def dispatch(state, _mutator, {:NOP_1, _, _}) do
+    state
+  end
+
+  # STOP signal
+  # Direct transition to "STOP" mode
+  def dispatch(state, mutator, {:STP, _, _}) do
+    state |> mutator.stop
+  end
+
+  # A=
+  # AND operation: scan a formal operand for "1"
+  # (parameter type: I, Q, T, C; data type: BI)
+
+  def dispatch(state, mutator, {:"A=", operand, [_bit, _addr] = args})
+      when operand in [:I, :Q, :F, :S, :D] do
+    result = 1 &&& mutator.get(state, operand, args)
+    state |> mutator.set(:RLO, result)
+  end
+
+  def dispatch(state, mutator, {:"A=", operand, [_addr] = args})
+      when operand in [:T, :C] do
+    result = 1 &&& mutator.get(state, operand, args) |> sup
+    state |> mutator.set(:RLO, result)
+  end
+
+  # AN=
+  # AND operation: scan a formal operand for "0"
+  # (parameter type: I, Q, T, C; data type: BI)
+
+  def dispatch(state, mutator, {:"AN=", operand, [_bit, _addr] = args})
+      when operand in [:I, :Q, :F, :S, :D] do
+    result = ~~~(1 &&& mutator.get(state, operand, args)) &&& 1
+    state |> mutator.set(:RLO, result)
+  end
+
+  def dispatch(state, mutator, {:"AN=", operand, [_addr] = args})
+      when operand in [:T, :C] do
+    result = ~~~(1 &&& mutator.get(state, operand, args) |> sup) &&& 1
+    state |> mutator.set(:RLO, result)
+  end
+
+  # O=
+  # OR operation: scan a formal operand for "1"
+  # (parameter type: I, Q, T, C; data type: BI)
+
+  def dispatch(state, mutator, {:"O=", operand, [_bit, _addr] = args})
+      when operand in [:I, :Q, :F, :S, :D] do
+    result = 1 ||| mutator.get(state, operand, args)
+    state |> mutator.set(:RLO, result)
+  end
+
+  def dispatch(state, mutator, {:"O=", operand, [_addr] = args})
+      when operand in [:T, :C] do
+    result = 1 ||| mutator.get(state, operand, args) |> sup
+    state |> mutator.set(:RLO, result)
+  end
+
+  # ON=
+  # OR operation: scan a formal operand for "0"
+  # (parameter type: I, Q, T, C; data type: BI)
+
+  def dispatch(state, mutator, {:"ON=", operand, [_bit, _addr] = args})
+      when operand in [:I, :Q, :F, :S, :D] do
+    result = ~~~(1 ||| mutator.get(state, operand, args)) &&& 1
+    state |> mutator.set(:RLO, result)
+  end
+
+  def dispatch(state, mutator, {:"ON=", operand, [_addr] = args})
+      when operand in [:T, :C] do
+    result = ~~~(1 ||| mutator.get(state, operand, args) |> sup) &&& 1
+    state |> mutator.set(:RLO, result)
+  end
+
+  # AW
+  def dispatch(state, mutator, {:AW, _, _}) do
+    acc1 = state |> mutator.get(:ACCU_1)
+    acc2 = state |> mutator.get(:ACCU_2)
+
+    state |> mutator.set(:ACCU_1, acc1 &&& acc2)
+  end
+
+  # OW
+  def dispatch(state, mutator, {:OW, _, _}) do
+    acc1 = state |> mutator.get(:ACCU_1)
+    acc2 = state |> mutator.get(:ACCU_2)
+
+    state |> mutator.set(:ACCU_1, acc1 ||| acc2)
+  end
+
+  # XOW
+  def dispatch(state, mutator, {:XOW, _, _}) do
+    acc1 = state |> mutator.get(:ACCU_1)
+    acc2 = state |> mutator.get(:ACCU_2)
+
+    state |> mutator.set(:ACCU_1, acc1 ^^^ acc2)
+  end
+
+  # TB
+  def dispatch(state, mutator, {:TB, operand, [_bit, _id] = args})
+      when operand in [:I, :Q, :F, :D, :RI, :RJ, :RS, :RT, :T, :C] do
+    result = 1 &&& mutator.get(state, operand, args)
+    state |> mutator.set(:RLO, result)
+  end
+
+  # TBN
+  def dispatch(state, mutator, {:TBN, operand, [_bit, _id] = args})
+      when operand in [:I, :Q, :F, :D, :RI, :RJ, :RS, :RT, :T, :C] do
+    result = 1 ^^^ mutator.get(state, operand, args)
+    state |> mutator.set(:RLO, result)
+  end
+
+  # SU
+  def dispatch(state, mutator, {:SU, operand, [_bit, _id] = args})
+      when operand in [:I, :Q, :F, :D, :RI, :RJ, :T, :C] do
+    state |> mutator.set(operand, args, 1)
+  end
+
+  # RU
+  def dispatch(state, mutator, {:RU, operand, [_bit, _id] = args})
+      when operand in [:I, :Q, :F, :D, :RI, :RJ, :T, :C] do
+    state |> mutator.set(operand, args, 0)
   end
 end

@@ -2,15 +2,14 @@ defmodule Emulation.Common.Utils do
   use Bitwise
 
   def to_bcd(value) do
-    read_decimals(value)
-    |> to_bcd(0)
+    read_decimals(value) |> to_bcd(0)
   end
 
   def to_bcd(decimals, index) do
     case decimals do
       [digit | tail] ->
         shift = index * 4
-        digit <<< (shift + to_bcd(tail, index + 1))
+        (digit <<< shift) + to_bcd(tail, index + 1)
 
       [] ->
         0
@@ -27,7 +26,7 @@ defmodule Emulation.Common.Utils do
     else
       shift = index * 4
       mask = 0xF <<< shift
-      digit = mask &&& value
+      digit = (mask &&& value) >>> shift
       :math.pow(10, index) * digit + read_decimals_from_bcd(value, index + 1, size)
     end
   end
@@ -38,11 +37,11 @@ defmodule Emulation.Common.Utils do
         []
 
       value == 0 and begin ->
-        [0] ++ read_decimals(value / 10, false)
+        [0] ++ read_decimals((value / 10) |> trunc, false)
 
       true ->
         digit = rem(value, 10)
-        [digit] ++ read_decimals(value / 10, false)
+        [digit] ++ read_decimals((value / 10) |> trunc, false)
     end
   end
 

@@ -33,7 +33,7 @@ defmodule EmulationTest.S5.Disassembler do
   end
 
   test "A=" do
-    assert {1, :A_assign, :formal_operand, [0xBA]} = Disassembler.translate([0x07BA])
+    assert {1, :"A=", :formal_operand, [0xBA]} = Disassembler.translate([0x07BA])
   end
 
   test "ABR" do

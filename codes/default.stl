@@ -1,7 +1,19 @@
+% Main cycle
 OB 1:
 JU PB 1
+AN= T 0
+JC PB 2
 BE
 
+% Activate/reactivate counter
 PB 1:
-SHOW IB 10
-BEc
+L KC 100
+A I 0.0 % Reset RLO
+AN= T 0 % Raise the RLO if the counter is deactivated
+SP T 0  % Activate timer if RLO is on a rising edge
+BE
+
+% Show if enabled counter
+PB 2:
+SHOW T 0
+BE

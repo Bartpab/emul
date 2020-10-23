@@ -24,7 +24,7 @@ defmodule Emulation.S5.AP.Services.Timers do
   end
 
   def write(tb, remaning) do
-    Emulation.Common.Utils.to_bcd(remaning) +
+    Emulation.Common.Utils.to_bcd(remaning |> trunc) +
       (case tb do
          {0.01, :second} -> 0
          {0.1, :second} -> 1
@@ -43,6 +43,7 @@ defmodule Emulation.S5.AP.Services.Timers do
       end
 
     remaining = Emulation.Common.Utils.from_bcd(timer, 3)
+
     {tb, remaining}
   end
 
@@ -65,28 +66,42 @@ defmodule Emulation.S5.AP.Services.Timers do
 
   def process_timer(state, timer_id) do
     timers = state |> State.take_area!(:T)
-    timer = timers |> Enum.fetch!(timer_id) |> read
 
-    {{slice, unit}, remaining} = timer
+    {{slice, unit}, remaining} =
+      timers
+      |> Enum.fetch!(timer_id)
+      |> read
 
     now =
       state
       |> State.now()
-      |> Emulations.Common.Time.convert(unit, :microsecond)
 
     tick =
       state
       |> State.get_timer_last_tick(timer_id)
-      |> Emulations.Common.Time.convert(unit, :microsecond)
 
-    if now - tick >= slice do
+    dt = (now - tick) |> Emulations.Common.Time.convert(:microsecond, unit)
+
+    if dt >= slice do
+      step = (dt / slice) |> trunc
+      remaining = remaining - step
+
+      remaining =
+        if remaining <= 0 do
+          0
+        else
+          remaining
+        end
+
+      encoded_timer = write({slice, unit}, remaining)
+
+      timers =
+        timers
+        |> List.replace_at(timer_id, encoded_timer)
+
       state
       |> State.set_timer_last_tick(timer_id, now)
-      |> State.write_area!(
-        :T,
-        timers
-        |> List.replace_at(timer_id, {{slice, unit}, remaining - slice})
-      )
+      |> State.write_area!(:T, timers)
     else
       state
     end
@@ -100,8 +115,10 @@ defmodule Emulation.S5.AP.Services.Timers do
     timers = state |> State.take_area!(:T)
     {tb, _} = timers |> Enum.fetch!(timer_id) |> read
 
+    encoded_timer = write(tb, remaining)
+
     state
-    |> State.write_area!(:T, timers |> List.replace_at(timer_id, write(tb, remaining)))
-    |> State.set_timer_last_tick(timer_id, State.now(state))
+    |> State.write_area!(:T, timers |> List.replace_at(timer_id, encoded_timer))
+    |> State.set_timer_last_tick(timer_id, state |> State.now())
   end
 end

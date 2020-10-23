@@ -14,7 +14,8 @@ defmodule Emulation.S5.AP.GenericState do
           OB: %{},
           FB: %{},
           PB: %{},
-          DB: %{}
+          DB: %{},
+          DX: %{}
         },
         flags: %{
           enable_interrupts: false
@@ -41,6 +42,10 @@ defmodule Emulation.S5.AP.GenericState do
         O: List.duplicate(0, 0xFF),
         C: List.duplicate(0, 0xFF),
         T: List.duplicate(0, 0xFF),
+        RI: List.duplicate(0, 0xFF),
+        RJ: List.duplicate(0, 0xFF),
+        RS: List.duplicate(0, 0xFF),
+        RT: List.duplicate(0, 0xFF),
         IM3: List.duplicate(0, 0xFF),
         IM4: List.duplicate(0, 0xFF),
         IPC: List.duplicate(0, 0xFF),
@@ -101,6 +106,10 @@ defmodule Emulation.S5.AP.GenericState do
   end
 
   # Block related
+  def generate_block(state, type, id, size) do
+    state |> write_block(type, id, List.duplicate(size, 0))
+  end
+
   def write_block(state, type, id, instrs) do
     state |> put_in([:ap, :blocks, type, id], instrs)
   end
@@ -125,13 +134,13 @@ defmodule Emulation.S5.AP.GenericState do
     state |> put_in([:ap, :bstack], tail)
   end
 
-  def open(state, id) do
-    unless get_in(state, [:ap, :blocks, :DB]) |> Map.has_key?(id) do
+  def open(state, type, id) do
+    unless get_in(state, [:ap, :blocks, type]) |> Map.has_key?(id) do
       raise "Block DB #{id} does not exist in memory."
     end
 
     state
-    |> set(:DBA, id)
+    |> set(:DBA, {type, id})
     |> set(:DBL, state |> get_block(:DB, id) |> Enum.count())
   end
 
@@ -195,7 +204,7 @@ defmodule Emulation.S5.AP.GenericState do
 
   def get(_, operand, args)
       when is_constant(operand) do
-    args
+    args |> Enum.fetch!(0)
   end
 
   def get(state, operand, args)
@@ -206,13 +215,7 @@ defmodule Emulation.S5.AP.GenericState do
 
     cond do
       data_size == 1 ->
-        [bit, addr] = args
-
-        state
-        |> take_area!(area_type)
-        |> Enum.fetch!(addr)
-        |> band(bsl(1, bit))
-        |> bsr(bit)
+        state |> get_bit(operand, args)
 
       data_size > cell_size ->
         [addr] = args
@@ -254,6 +257,41 @@ defmodule Emulation.S5.AP.GenericState do
     state |> set(operand, args, [value])
   end
 
+  def get_bit(state, operand, args) do
+    area_type = op2area(operand)
+    [bit, addr] = args
+
+    state
+    |> take_area!(area_type)
+    |> Enum.fetch!(addr)
+    |> band(bsl(1, bit))
+    |> bsr(bit)
+  end
+
+  def set_bit(state, operand, args, value) do
+    area_type = op2area(operand)
+    [bit, addr] = args
+
+    value = value &&& 1
+
+    flag = ~~~(1 <<< bit)
+
+    curr =
+      state
+      |> take_area!(area_type)
+      |> Enum.fetch!(addr)
+
+    value = (curr &&& flag) + (value <<< bit)
+
+    area =
+      state
+      |> take_area!(area_type)
+      |> List.replace_at(addr, value)
+
+    state
+    |> write_area!(area_type, area)
+  end
+
   def set(state, operand, args, values) when is_list(values) do
     data_size = get_data_size(operand)
     area_type = op2area(operand)
@@ -261,24 +299,11 @@ defmodule Emulation.S5.AP.GenericState do
 
     cond do
       data_size == 1 ->
-        [bit, addr] = args
+        state |> set_bit(operand, args, values |> Enum.fetch!(0))
 
-        flag = ~~~(1 <<< bit)
-
-        value =
-          state
-          |> take_area!(area_type)
-          |> Enum.fetch!(addr)
-
-        value = (value &&& flag) + (values |> Enum.fetch!(0) <<< bit)
-
-        area =
-          state
-          |> take_area!(area_type)
-          |> List.replace_at(addr, value)
-
-        state
-        |> write_area!(area_type, area)
+      # Special case
+      operand in [:T, :C] and args |> Enum.count() == 2 ->
+        state |> set_bit(operand, args, values |> Enum.fetch!(0))
 
       data_size == cell_size ->
         [addr] = args

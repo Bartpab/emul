@@ -21,11 +21,15 @@ defmodule Emulation.S5.AP.State.Utils do
           operand in [:I, :IB, :IW, :ID] -> :PII
           operand in [:C] -> :C
           operand in [:T] -> :T
+          operand in [:RI] -> :RI
+          operand in [:RJ] -> :RJ
+          operand in [:RS] -> :RS
+          operand in [:RT] -> :RT
           operand in [:PY, :PW] -> :P
           operand in [:OY, :OW] -> :O
           operand in [:F, :FY, :FW, :FD] -> :F
           operand in [:S, :SY, :SW, :SD] -> :S
-          operand in [:DR, :DL, :DW, :DD] -> :D
+          operand in [:DR, :DL, :DW, :DD, :D] -> :D
         end
       end
 
@@ -44,6 +48,10 @@ defmodule Emulation.S5.AP.State.Utils do
           :O -> 8
           :F -> 8
           :S -> 8
+          :RI -> 16
+          :RJ -> 16
+          :RS -> 16
+          :RT -> 16
           :D -> 16
           :C -> 16
           :T -> 16
@@ -52,7 +60,7 @@ defmodule Emulation.S5.AP.State.Utils do
 
       def get_data_size(operand) do
         cond do
-          operand in [:Q, :I, :F, :S] -> 1
+          operand in [:Q, :I, :F, :S, :RI, :RJ, :RS, :RT, :D] -> 1
           operand in [:QB, :IB, :PY, :OY, :FY, :SY, :DR, :DL] -> 8
           operand in [:QW, :IW, :PW, :OW, :FW, :SW, :DW, :C, :T] -> 16
           operand in [:QD, :ID, :FD, :SD, :DD] -> 32

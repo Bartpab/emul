@@ -36,7 +36,7 @@ defmodule Emulation.S5.AP.Disassembler do
   end
 
   def translate([w0 | _]) when w0 >>> 8 == 0x07 do
-    {1, :A_assign, :formal_operand, [w0 &&& 0xFF]}
+    {1, :"A=", :formal_operand, [w0 &&& 0xFF]}
   end
 
   def translate([0x780A | [w1 | _]]) do
@@ -1409,82 +1409,82 @@ defmodule Emulation.S5.AP.Disassembler do
   end
 
   def translate([0x6000 | _]) do
-    {1, :div_F, :no_operand, []}
+    {1, :":F", :no_operand, []}
   end
 
   def translate([0x6004 | _]) do
-    {1, :mult_F, :no_operand, []}
+    {1, :xF, :no_operand, []}
   end
 
   def translate([0x7900 | _]) do
-    {1, :add_F, :no_operand, []}
+    {1, :"+F", :no_operand, []}
   end
 
   def translate([0x5900 | _]) do
-    {1, :sub_F, :no_operand, []}
+    {1, :"-F", :no_operand, []}
   end
 
   def translate([0x2180 | _]) do
-    {1, :neq_F, :no_operand, []}
+    {1, :"><F", :no_operand, []}
   end
 
   def translate([0x2120 | _]) do
-    {1, :gt_F, :no_operand, []}
+    {1, :">F", :no_operand, []}
   end
 
   def translate([0x2140 | _]) do
-    {1, :lt_F, :no_operand, []}
+    {1, :"<F", :no_operand, []}
   end
 
   def translate([0x2160 | _]) do
-    {1, :eq_F, :no_operand, []}
+    {1, :"!=F", :no_operand, []}
   end
 
   def translate([0x21A0 | _]) do
-    {1, :gte_F, :no_operand, []}
+    {1, :"=>F", :no_operand, []}
   end
 
   def translate([0x21C0 | _]) do
-    {1, :lte_F, :no_operand, []}
+    {1, :"=<F", :no_operand, []}
   end
 
   def translate([0x3120 | _]) do
-    {1, :gt_G, :no_operand, []}
+    {1, :">G", :no_operand, []}
   end
 
   def translate([0x3140 | _]) do
-    {1, :lt_G, :no_operand, []}
+    {1, :"<G", :no_operand, []}
   end
 
   def translate([0x3160 | _]) do
-    {1, :eq_G, :no_operand, []}
+    {1, :"!=G", :no_operand, []}
   end
 
   def translate([0x3180 | _]) do
-    {1, :neq_G, :no_operand, []}
+    {1, :"><G", :no_operand, []}
   end
 
   def translate([0x31A0 | _]) do
-    {1, :gte_G, :no_operand, []}
+    {1, :"=>G", :no_operand, []}
   end
 
   def translate([0x31C0 | _]) do
-    {1, :lte_G, :no_operand, []}
+    {1, :"=<G", :no_operand, []}
   end
 
   def translate([0x6003 | _]) do
-    {1, :div_G, :no_operand, []}
+    {1, :":G", :no_operand, []}
   end
 
   def translate([0x6007 | _]) do
-    {1, :mult_G, :no_operand, []}
+    {1, :xG, :no_operand, []}
   end
 
   def translate([0x600F | _]) do
-    {1, :add_G, :no_operand, []}
+    {1, :"+G", :no_operand, []}
   end
 
   def translate([0x600B | _]) do
-    {1, :sub_G, :no_operand, []}
+    {1, :"-G", :no_operand, []}
   end
 end

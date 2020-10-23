@@ -57,6 +57,10 @@ defmodule Emulation.S5.AP.CommonState do
         state[:ap][:tick]
       end
 
+      def stop(state) do
+        state |> Emulation.Emulator.State.push(:STOP)
+      end
+
       # Register-related functions
       def registers(state) do
         get_in(state, [:ap, :registers])
